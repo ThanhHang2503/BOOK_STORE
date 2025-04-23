@@ -1,23 +1,23 @@
 class ChiTietHD:
-    def __init__(self, maHD="", maSP="", soLuong=0, donGia=0.0):
+    def __init__(self, maHD="", maSP="", soLuongSP=0, donGia=0.0):
         self.maHD = maHD
         self.maSP = maSP
-        self.soLuong = soLuong
+        self.soLuongSP = soLuongSP
         self.donGia = donGia
         self.thanhTien = self.thanhTien()
 
-    def thongTinHD(self, maHD, maSP, soLuong, donGia):
+    def thongTinHD(self, maHD, maSP, soLuongSP, donGia):
         """Thiết lập thông tin chi tiết hóa đơn"""
         self.maHD = maHD
         self.maSP = maSP
-        self.soLuong = soLuong
+        self.soLuongSP = soLuongSP
         self.donGia = donGia
         self.thanhTien = self.thanhTien()
 
     def thanhTien(self):
         """Tính thành tiền"""
-        return self.soLuong * self.donGia
+        return self.soLuongSP * self.donGia
 
     def xuat(self):
         """Xuất thông tin chi tiết hóa đơn"""
-        return f"Mã HD: {self.maHD}, Mã SP: {self.maSP}, Số lượng: {self.soLuong}, Đơn giá: {self.donGia}, Thành tiền: {self.thanhTien}"
+        return f"Mã HD: {self.maHD}, Mã SP: {self.maSP}, Số lượng: {self.soLuongSP}, Đơn giá: {self.donGia}, Thành tiền: {self.thanhTien}"

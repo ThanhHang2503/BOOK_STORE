@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from ChiTietHD import ChiTietHD
-from DSCTHoaDon import DSCTHoaDon
+from .ChiTietHD import ChiTietHD
+from .DSCTHoaDon import DSCTHoaDon
 
 
 class ChiTietHDGUI:
@@ -138,8 +138,8 @@ class ChiTietHDGUI:
         self.entry_maSP.grid(row=1, column=3, padx=5, pady=5, sticky="ew")
 
         ttk.Label(self.frame_nhap, text="Số lượng:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
-        self.entry_soLuong = ttk.Entry(self.frame_nhap)
-        self.entry_soLuong.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
+        self.entry_soLuongSP = ttk.Entry(self.frame_nhap)
+        self.entry_soLuongSP.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
 
         ttk.Label(self.frame_nhap, text="Đơn giá:").grid(row=2, column=2, padx=5, pady=5, sticky="w")
         self.entry_donGia = ttk.Entry(self.frame_nhap)
@@ -232,24 +232,24 @@ class ChiTietHDGUI:
     def tinhThanhTien(self):
         """Tính thành tiền từ số lượng và đơn giá"""
         try:
-            soLuong = self.entry_soLuong.get().strip()
+            soLuongSP = self.entry_soLuongSP.get().strip()
             donGia = self.entry_donGia.get().strip()
 
-            if not soLuong or not donGia:
+            if not soLuongSP or not donGia:
                 self.label_thong_bao.config(text="Vui lòng nhập đầy đủ số lượng và đơn giá!", fg="red")
                 return
 
             try:
-                soLuong = int(soLuong)
+                soLuongSP = int(soLuongSP)
                 donGia = float(donGia)
-                if soLuong <= 0 or donGia <= 0:
+                if soLuongSP <= 0 or donGia <= 0:
                     self.label_thong_bao.config(text="Số lượng và đơn giá phải lớn hơn 0!", fg="red")
                     return
             except ValueError:
                 self.label_thong_bao.config(text="Số lượng và đơn giá phải là số!", fg="red")
                 return
 
-            thanhTien = soLuong * donGia
+            thanhTien = soLuongSP * donGia
 
             self.entry_thanhTien.config(state="normal")
             self.entry_thanhTien.delete(0, tk.END)
@@ -291,8 +291,8 @@ class ChiTietHDGUI:
             if self.entry_maSP.cget("state") == "readonly":
                 self.entry_maSP.config(state="readonly")
 
-            self.entry_soLuong.delete(0, tk.END)
-            self.entry_soLuong.insert(0, values[2])
+            self.entry_soLuongSP.delete(0, tk.END)
+            self.entry_soLuongSP.insert(0, values[2])
 
             self.entry_donGia.delete(0, tk.END)
             self.entry_donGia.insert(0, values[3])
@@ -311,17 +311,17 @@ class ChiTietHDGUI:
         try:
             maHD = self.entry_maHD.get().strip()
             maSP = self.entry_maSP.get().strip()
-            soLuong = self.entry_soLuong.get().strip()
+            soLuongSP = self.entry_soLuongSP.get().strip()
             donGia = self.entry_donGia.get().strip()
 
-            if not all([maHD, maSP, soLuong, donGia]):
+            if not all([maHD, maSP, soLuongSP, donGia]):
                 self.label_thong_bao.config(text="Vui lòng nhập đầy đủ thông tin!", fg="red")
                 return
 
             try:
-                soLuong = int(soLuong)
+                soLuongSP = int(soLuongSP)
                 donGia = float(donGia)
-                if soLuong <= 0 or donGia <= 0:
+                if soLuongSP <= 0 or donGia <= 0:
                     self.label_thong_bao.config(text="Số lượng và đơn giá phải lớn hơn 0!", fg="red")
                     return
             except ValueError:
@@ -332,7 +332,7 @@ class ChiTietHDGUI:
             ct = ChiTietHD(
                 maHD=maHD,
                 maSP=maSP,
-                soLuong=soLuong,
+                soLuongSP=soLuongSP,
                 donGia=donGia
             )
 
@@ -398,8 +398,8 @@ class ChiTietHDGUI:
         self.entry_maSP.config(state="normal")
         self.entry_maSP.delete(0, tk.END)
 
-        self.entry_soLuong.delete(0, tk.END)
-        self.entry_soLuong.insert(0, "0")
+        self.entry_soLuongSP.delete(0, tk.END)
+        self.entry_soLuongSP.insert(0, "0")
 
         self.entry_donGia.delete(0, tk.END)
         self.entry_donGia.insert(0, "0")

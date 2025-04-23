@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 
-from DoAn.HoaDonGUI import HoaDonGUI
-from DoAn.NhanVienGUI import NhanVienGUI
+from HOADON.HoaDonGUI import HoaDonGUI
+from NHANVIEN.NhanVienGUI import NhanVienGUI
+
 
 root = tk.Tk()
 root.title("***********QUẢN LÍ CỬA HÀNG*********")
@@ -34,7 +35,7 @@ root.grid_columnconfigure(0, weight=1)
 
 options = {
     "Quản Lí Nhân viên": ["Thêm nhân viên", "Sửa thông tin nhân viên", "Tìm kiếm nhân viên", "Hiển thị danh sách"],
-    "Quản Lí Hóa đơn": ["Tạo hóa đơn", "Tìm kiếm hóa đơn", "Sửa hóa đơn", "Hiển thị hóa đơn"],
+    "Quản Lí Hóa đơn": ["Tạo hóa đơn", "Sửa hóa đơn", "Tìm kiếm hóa đơn", "Hiển thị hóa đơn"],
     "Quản Lí Khách hàng": ["Thêm khách hàng", "Sửa thông tin khách hàng", "Tìm kiếm khách hàng"],
     "Quản Lí Sách": ["Thêm sản phẩm", "Sửa thông tin sản phẩm", "Tìm kiếm sản phẩm", "Trạng Thái"],
     "Thống Kê Doanh thu": ["Báo cáo ngày", "Báo cáo quý", "Báo cáo năm"],

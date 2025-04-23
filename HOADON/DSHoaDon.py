@@ -1,6 +1,6 @@
 import pyodbc
 
-from HoaDon import HoaDon
+from .HoaDon import HoaDon
 
 
 class DSHoaDon:
@@ -56,8 +56,8 @@ class DSHoaDon:
 
         elif maKH:
             self.cursor.execute("SELECT * FROM HOADON WHERE maKH = ?", (maKH,))
-            row = self.cursor.fetchone()
-            return HoaDon(row[0], row[1], row[2], row[4], row[3]) if row else None
+            rows = self.cursor.fetchall()
+            return [HoaDon(row[0], row[1], row[2], row[4], row[3]) for row in rows] if rows else None
 
         return None
 

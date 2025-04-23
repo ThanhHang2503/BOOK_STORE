@@ -1,6 +1,6 @@
 import pyodbc
 
-from ChiTietHD import ChiTietHD
+from .ChiTietHD import ChiTietHD
 
 
 class DSCTHoaDon:
@@ -16,8 +16,8 @@ class DSCTHoaDon:
     def them(self, chitiet):
         try:
             self.cursor.execute(
-                "INSERT INTO CHITIETHOADON (maHD, maSP, soLuong, donGia, thanhTien) VALUES (?, ?, ?, ?, ?)",
-                (chitiet.maHD, chitiet.maSP, chitiet.soLuong, chitiet.donGia, chitiet.thanhTien)
+                "INSERT INTO CHITIETHD (maHD, maSP, soLuongSP, donGia, thanhTien) VALUES (?, ?, ?, ?, ?)",
+                (chitiet.maHD, chitiet.maSP, chitiet.soLuongSP, chitiet.donGia, chitiet.thanhTien)
             )
             self.conn.commit()
             return True
@@ -27,7 +27,7 @@ class DSCTHoaDon:
 
     def xoa(self, maHD, maSP):
         try:
-            self.cursor.execute("DELETE FROM CHITIETHOADON WHERE maHD = ? AND maSP = ?", (maHD, maSP))
+            self.cursor.execute("DELETE FROM CHITIETHD WHERE maHD = ? AND maSP = ?", (maHD, maSP))
             self.conn.commit()
             return True
         except Exception as e:
@@ -37,18 +37,18 @@ class DSCTHoaDon:
     def timKiem(self, maHD=None, maSP=None):
 
         if maHD:
-            self.cursor.execute("SELECT * FROM CHITIETHOADON WHERE maHD = ?", (maHD,))
+            self.cursor.execute("SELECT * FROM CHITIETHD WHERE maHD = ?", (maHD,))
             row = self.cursor.fetchone()
             return [ChiTietHD(row[0], row[1], row[2], row[3])] if row else []
 
         elif maSP:
-            self.cursor.execute("SELECT * FROM CHITIETHOADON WHERE maKH = ?", (maSP,))
+            self.cursor.execute("SELECT * FROM CHITIETHD WHERE maKH = ?", (maSP,))
             row = self.cursor.fetchone()
             return [ChiTietHD(row[0], row[1], row[2], row[3])] if row else []
         return []
 
     def xuat(self):
-        self.cursor.execute("SELECT * FROM CHITIETHOADON")
+        self.cursor.execute("SELECT * FROM CHITIETHD")
         rows = self.cursor.fetchall()
         for row in rows:
             ct = ChiTietHD(row[0], row[1], row[2], row[3])
