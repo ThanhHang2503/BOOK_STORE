@@ -1,44 +1,79 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+import pyodbc
 
-class KhachHangUI(tk.Frame):
+class KhachHangGUI(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
-        
+        self.customers = []  # Danh sách khách hàng được tải từ SQL
+        self.conn = self.ket_noi_sql()  # Thiết lập kết nối SQL
+        self.create_widgets()
+
+    def ket_noi_sql(self):
+        """ Kết nối với SQL Server """
+        try:
+            conn = pyodbc.connect(
+                "DRIVER={SQL Server};"
+                "SERVER=LAPTOP-H2KMKBBS\MSSQLSERVER01;"  # Thay bằng tên server của bạn
+                "DATABASE=DOANPYTHON;"            # Thay bằng tên database của bạn
+            )
+            print("✅ Kết nối SQL thành công!")
+            return conn
+        except Exception as e:
+            messagebox.showerror("Lỗi kết nối SQL", str(e))
+            return None
+
+    def load_customers_from_sql(self):
+        """ Tải danh sách khách hàng từ SQL Server và cập nhật self.customers """
+        if not self.conn:
+            messagebox.showerror("Lỗi", "Không thể kết nối SQL!")
+            return
+
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT maKH, tenKH, diaChi, dienThoai FROM KhachHang")
+            rows = cursor.fetchall()
+            self.customers.clear()
+            for row in rows:
+                customer = {
+                    "maKH": row[0],
+                    "tenKH": row[1],
+                    "diaChi": row[2],
+                    "dienThoai": row[3]
+                }
+                self.customers.append(customer)
+            print(f"✅ Đã tải {len(self.customers)} khách hàng từ SQL!")
+        except Exception as e:
+            messagebox.showerror("Lỗi SQL", str(e))
+
+    def create_widgets(self):
         # Tạo thanh tiêu đề + nút Đóng cho khung này
         top_bar = tk.Frame(self, bg="#F0F0F0")
         top_bar.pack(fill='x', pady=5)
-        
+
         label_title = tk.Label(top_bar, text="Quản Lý Khách Hàng", font=("Arial", 14, "bold"), bg="#F0F0F0")
         label_title.pack(side="left", padx=10)
-        
+
         btn_close = tk.Button(top_bar, text="Đóng", command=self.close_frame, bg="red", fg="white")
         btn_close.pack(side="right", padx=10)
-        
-        # Dữ liệu khách hàng (giả lập CSDL)
-        self.customers = [
-            {"maKH": "KH001", "tenKH": "Nguyễn Văn A", "diaChi": "Hà Nội",   "dienThoai": "0123456789"},
-            {"maKH": "KH002", "tenKH": "Trần Thị B",    "diaChi": "TP.HCM",  "dienThoai": "0987654321"},
-            {"maKH": "KH003", "tenKH": "Lê Văn C",      "diaChi": "Đà Nẵng", "dienThoai": "0909090909"}
-        ]
-        
+
         # Notebook chứa các tab
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill="both", expand=True)
-        
+
         # Tạo 5 tab: Thêm, Sửa, Tìm kiếm, Danh sách, Xóa
         self.tab_them = ttk.Frame(self.notebook)
         self.tab_sua = ttk.Frame(self.notebook)
         self.tab_tim = ttk.Frame(self.notebook)
         self.tab_danhsach = ttk.Frame(self.notebook)
         self.tab_xoa = ttk.Frame(self.notebook)
-        
+
         self.notebook.add(self.tab_them, text="Thêm khách hàng")
         self.notebook.add(self.tab_sua, text="Sửa thông tin khách hàng")
         self.notebook.add(self.tab_tim, text="Tìm kiếm khách hàng")
         self.notebook.add(self.tab_danhsach, text="Danh sách khách hàng")
         self.notebook.add(self.tab_xoa, text="Xóa khách hàng")
-        
+
         # Xây dựng giao diện cho từng tab
         self.create_tab_them()
         self.create_tab_sua()
@@ -76,6 +111,8 @@ class KhachHangUI(tk.Frame):
         tk.Label(frame, text="Mã khách hàng cần sửa:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
         self.entry_update_id = tk.Entry(frame)
         self.entry_update_id.grid(row=0, column=1, padx=10, pady=10)
+        self.entry_update_id.bind("<FocusOut>", self.prefill_customer_info)
+
         
         tk.Label(frame, text="Tên mới:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
         self.entry_update_name = tk.Entry(frame)
@@ -123,6 +160,7 @@ class KhachHangUI(tk.Frame):
         
         self.load_all_customers()
 
+
     def create_tab_xoa(self):
         frame = self.tab_xoa
         tk.Label(frame, text="Mã khách hàng cần xóa:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
@@ -133,8 +171,13 @@ class KhachHangUI(tk.Frame):
         btn_delete.grid(row=1, column=0, columnspan=2, padx=10, pady=20)
 
     def load_all_customers(self):
+        # Cập nhật dữ liệu từ SQL trước
+        self.load_customers_from_sql()
+
+        # Xóa toàn bộ dữ liệu hiện có trong treeview
         for item in self.tree_ds.get_children():
             self.tree_ds.delete(item)
+        # Chèn lại dữ liệu từ self.customers
         for customer in self.customers:
             self.tree_ds.insert("", "end", values=(
                 customer["maKH"],
@@ -156,45 +199,125 @@ class KhachHangUI(tk.Frame):
             messagebox.showerror("Lỗi", "Mã và tên khách hàng không được để trống!")
             return
         
+        # Kiểm tra tồn tại trên SQL (nếu cần) hoặc trong danh sách cục bộ
         if any(cust["maKH"] == maKH for cust in self.customers):
             messagebox.showerror("Lỗi", "Mã khách hàng đã tồn tại!")
             return
+
+        # Thêm khách hàng vào SQL
+        if self.conn:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute(
+                    "INSERT INTO KhachHang (maKH, tenKH, diaChi, dienThoai) VALUES (?, ?, ?, ?)",
+                    (maKH, tenKH, diaChi, dienThoai)
+                )
+                self.conn.commit()
+            except Exception as e:
+                messagebox.showerror("Lỗi SQL", str(e))
+                return
 
         new_customer = {"maKH": maKH, "tenKH": tenKH, "diaChi": diaChi, "dienThoai": dienThoai}
         self.customers.append(new_customer)
         messagebox.showinfo("Thành công", f"Đã thêm khách hàng {maKH}")
         self.load_all_customers()
         
+        # Xóa các trường nhập
         self.entry_id.delete(0, tk.END)
         self.entry_name.delete(0, tk.END)
         self.entry_address.delete(0, tk.END)
         self.entry_phone.delete(0, tk.END)
 
     def update_customer(self):
-        maKH = self.entry_update_id.get().strip()
+        maKH_str = self.entry_update_id.get().strip()
         tenKH = self.entry_update_name.get().strip()
         diaChi = self.entry_update_address.get().strip()
         dienThoai = self.entry_update_phone.get().strip()
+
+        if not maKH_str:
+            messagebox.showerror("Lỗi", "Vui lòng nhập mã khách hàng!")
+            return
+
+        try:
+            # Chuyển đổi mã khách hàng sang kiểu số nguyên nếu có thể
+            maKH = int(maKH_str)
+        except ValueError:
+            # Nếu không thể chuyển sang số nguyên, giữ nguyên dạng chuỗi
+            maKH = maKH_str
+
+        # Tải lại danh sách trước khi tìm
+        self.load_customers_from_sql()
+
+        # Tìm khách hàng trong self.customers
+        customer = next((c for c in self.customers if c["maKH"] == maKH), None)
+        if not customer:
+            messagebox.showerror("Lỗi", f"Không tìm thấy khách hàng với mã {maKH_str}")
+            return
+
+        # Kiểm tra xem người dùng đã nhập thông tin mới chưa
+        if not tenKH and not diaChi and not dienThoai:
+            messagebox.showwarning("Cảnh báo", "Không có thông tin nào được cập nhật!")
+            return
         
-        for customer in self.customers:
-            if customer["maKH"] == maKH:
-                customer["tenKH"] = tenKH or customer["tenKH"]
-                customer["diaChi"] = diaChi or customer["diaChi"]
-                customer["dienThoai"] = dienThoai or customer["dienThoai"]
-                messagebox.showinfo("Thành công", f"Đã cập nhật khách hàng {maKH}")
-                self.load_all_customers()
-                return
-        messagebox.showerror("Lỗi", "Không tìm thấy khách hàng cần sửa!")
+        # Hiển thị hộp thoại xác nhận trước khi cập nhật
+        if not messagebox.askyesno("Xác nhận", f"Bạn có chắc muốn cập nhật thông tin khách hàng {maKH_str}?"):
+            return
+
+        # Cập nhật trong SQL
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                "UPDATE KhachHang SET tenKH = ?, diaChi = ?, dienThoai = ? WHERE maKH = ?",
+                (tenKH or customer["tenKH"],
+                diaChi or customer["diaChi"],
+                dienThoai or customer["dienThoai"],
+                maKH)
+            )
+            self.conn.commit()
+        except Exception as e:
+            messagebox.showerror("Lỗi SQL", str(e))
+            return
+
+        # Cập nhật trong danh sách cục bộ
+        customer["tenKH"] = tenKH or customer["tenKH"]
+        customer["diaChi"] = diaChi or customer["diaChi"]
+        customer["dienThoai"] = dienThoai or customer["dienThoai"]
+
+        messagebox.showinfo("Thành công", f"Đã cập nhật khách hàng {maKH_str}")
+        self.load_all_customers()
+        
+        # Xóa nội dung các ô nhập sau khi cập nhật thành công
+        self.entry_update_id.delete(0, tk.END)
+        self.entry_update_name.delete(0, tk.END)
+        self.entry_update_address.delete(0, tk.END)
+        self.entry_update_phone.delete(0, tk.END)
+
 
     def search_customer(self):
-        keyword = self.entry_search.get().strip().lower()
-        results = [cust for cust in self.customers if keyword in cust["maKH"].lower() 
-                   or keyword in cust["tenKH"].lower() 
-                   or keyword in cust["diaChi"].lower() 
-                   or keyword in cust["dienThoai"].lower()]
+        # Tải lại danh sách trước khi tìm
+        self.load_customers_from_sql()
+
+        search_id = self.entry_search.get().strip()
+        results = []
         
+        try:
+            # Thử chuyển đổi sang số nguyên nếu có thể
+            search_id_int = int(search_id)
+        except ValueError:
+            # Nếu không thể chuyển đổi, giữ nguyên dạng chuỗi
+            search_id_int = search_id
+        
+        # Tìm khách hàng theo mã KH chính xác
+        for cust in self.customers:
+            if cust["maKH"] == search_id_int:
+                results.append(cust)
+                break  # Dừng ngay khi tìm thấy vì mã KH là duy nhất
+        
+        # Xóa dữ liệu cũ
         for item in self.tree.get_children():
             self.tree.delete(item)
+            
+        # Chèn kết quả
         for customer in results:
             self.tree.insert("", "end", values=(
                 customer["maKH"],
@@ -202,27 +325,83 @@ class KhachHangUI(tk.Frame):
                 customer["diaChi"],
                 customer["dienThoai"]
             ))
-        if not results:
-            messagebox.showinfo("Thông báo", "Không tìm thấy khách hàng phù hợp.")
 
+        if not results:
+            messagebox.showinfo("Thông báo", "Không tìm thấy khách hàng với mã này.")
     def delete_customer(self):
-        maKH = self.entry_delete_id.get().strip()
-        for idx, customer in enumerate(self.customers):
+        maKH_str = self.entry_delete_id.get().strip()
+        
+        if not maKH_str:
+            messagebox.showerror("Lỗi", "Vui lòng nhập mã khách hàng cần xóa!")
+            return
+        
+        try:
+            # Chuyển đổi mã khách hàng sang kiểu số nguyên nếu có thể
+            maKH = int(maKH_str)
+        except ValueError:
+            # Nếu không thể chuyển sang số nguyên, giữ nguyên dạng chuỗi
+            maKH = maKH_str
+            
+        # Tải lại danh sách để đảm bảo dữ liệu mới nhất
+        self.load_customers_from_sql()
+        
+        # Kiểm tra khách hàng có tồn tại không
+        customer_exists = False
+        for customer in self.customers:
             if customer["maKH"] == maKH:
-                if messagebox.askyesno("Xác nhận", f"Bạn có chắc muốn xóa khách hàng {maKH}?"):
-                    del self.customers[idx]
-                    messagebox.showinfo("Thành công", f"Đã xóa khách hàng {maKH}")
-                    self.load_all_customers()
-                return
-        messagebox.showerror("Lỗi", "Không tìm thấy khách hàng cần xóa!")
+                customer_exists = True
+                break
+        
+        if not customer_exists:
+            messagebox.showerror("Lỗi", f"Không tìm thấy khách hàng có mã '{maKH_str}'!")
+            return
+            
+        # Xác nhận trước khi xóa
+        if not messagebox.askyesno("Xác nhận", f"Bạn có chắc muốn xóa khách hàng {maKH_str}?"):
+            return
+            
+        # Xóa trên SQL
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("DELETE FROM KhachHang WHERE maKH = ?", (maKH,))
+            row_count = cursor.rowcount
+            self.conn.commit()
+            
+            if row_count > 0:
+                messagebox.showinfo("Thành công", f"Đã xóa khách hàng {maKH_str}")
+                # Tải lại danh sách và xóa nội dung ô nhập
+                self.load_all_customers()
+                self.entry_delete_id.delete(0, tk.END)
+            else:
+                messagebox.showwarning("Cảnh báo", f"Không có khách hàng nào bị xóa với mã {maKH_str}")
+        except Exception as e:
+            messagebox.showerror("Lỗi SQL", str(e))
+    def prefill_customer_info(self, event=None):
+        maKH = self.entry_update_id.get().strip()
+        if not maKH:
+            return
+
+        self.load_customers_from_sql()
+
+        customer = next((c for c in self.customers if c["maKH"] == maKH), None)
+        if customer:
+            self.entry_update_name.delete(0, tk.END)
+            self.entry_update_address.delete(0, tk.END)
+            self.entry_update_phone.delete(0, tk.END)
+
+            self.entry_update_name.insert(0, customer["tenKH"])
+            self.entry_update_address.insert(0, customer["diaChi"])
+            self.entry_update_phone.insert(0, customer["dienThoai"])
+        else:
+            self.entry_update_name.delete(0, tk.END)
+            self.entry_update_address.delete(0, tk.END)
+            self.entry_update_phone.delete(0, tk.END)
 
 
 # =========================================
 # Code chạy chính (giao diện tổng thể)
 # =========================================
 if __name__ == "__main__":
-    import tkinter as tk
-    
     root = tk.Tk()
     root.title("***********QUẢN LÍ CỬA HÀNG*********")
     
@@ -248,28 +427,25 @@ if __name__ == "__main__":
     root.grid_rowconfigure(2, weight=1)
     root.grid_columnconfigure(0, weight=1)
     
-    # Thay vì submenu với mũi tên, ta tạo 1 nút Quản Lí Khách hàng duy nhất
+    # Nút Quản Lí Khách hàng
     def show_khach_hang_ui():
         for widget in main_content.winfo_children():
             widget.destroy()
-        kh_frame = KhachHangUI(main_content)
+        kh_frame = KhachHangGUI(main_content)
         kh_frame.pack(fill="both", expand=True)
-
-    # Hàm tạo menu: Tạo menubutton cho label khác, riêng "Quản Lí Khách hàng" tạo 1 nút
+    
     def create_menu(parent, label, values):
         frame = tk.Frame(parent, bd=2, relief="ridge")
         if label == "Quản Lí Khách hàng":
-            # Chỉ tạo 1 nút thay vì menubutton
+            # Tạo nút thay vì menubutton
             single_button = tk.Button(frame, text=label, command=show_khach_hang_ui)
             single_button.pack(fill="both", expand=True)
         else:
             menubutton = ttk.Menubutton(frame, text=label, direction="below")
             menu = tk.Menu(menubutton, tearoff=0)
             menubutton.config(menu=menu)
-            
             for item in values:
                 menu.add_command(label=item, command=lambda i=item: print(f"Chọn: {i}"))
-            
             menubutton.pack(fill="both", expand=True)
         return frame
 
@@ -291,5 +467,3 @@ if __name__ == "__main__":
         i += 1
     
     root.mainloop()
-
-
