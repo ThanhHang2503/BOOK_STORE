@@ -1,4 +1,4 @@
-from DSPhieuNhap import DSPhieuNhap
+from PHIEUNHAP.PhieuNhapDAO import DSPhieuNhap
 
 def test_tim_kiem_phieu_nhap():
     ds_phieu_nhap = DSPhieuNhap()
