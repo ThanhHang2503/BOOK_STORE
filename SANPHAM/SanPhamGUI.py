@@ -148,22 +148,21 @@ class SanPhamGUI(tk.Frame):
 
     def create_tab_tim(self):
         frame = self.tab_tim
-        tk.Label(frame, text="Nhập từ khóa tìm kiếm:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        tk.Label(frame, text="Nhập mã sản phẩm:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
         self.entry_search = tk.Entry(frame)
         self.entry_search.grid(row=0, column=1, padx=10, pady=10)
-        
+
         btn_search = tk.Button(frame, text="Tìm kiếm", command=self.search_product)
         btn_search.grid(row=0, column=2, padx=10, pady=10)
-        
-        columns = ("Mã Sản Phẩm", "Tên Sản Phẩm", "Số Lượng", "Đơn Giá", "Tác Giả", "Nhà Xuất Bản")
+
+        columns = ("Mã SP", "Tên SP", "Số Lượng", "Đơn Giá", "Tác Giả", "Nhà Xuất Bản")
         self.tree = ttk.Treeview(frame, columns=columns, show="headings")
         for col in columns:
             self.tree.heading(col, text=col)
         self.tree.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky="nsew")
-        
+
         frame.grid_rowconfigure(1, weight=1)
         frame.grid_columnconfigure(1, weight=1)
-
     def create_tab_danhsach(self):
         frame = self.tab_danhsach
         btn_refresh = tk.Button(frame, text="Tải lại danh sách", command=self.load_all_products)
@@ -174,13 +173,13 @@ class SanPhamGUI(tk.Frame):
         self.tree_ds = ttk.Treeview(frame, columns=columns, show="headings")
 
         # Đặt tiêu đề cho các cột
-        self.tree_ds.heading("maSP", text="Mã Sản Phẩm")
-        self.tree_ds.heading("tenSP", text="Tên Sản Phẩm")
+        self.tree_ds.heading("maSP", text="Mã SP")
+        self.tree_ds.heading("tenSP", text="Tên SP")
         self.tree_ds.heading("soLuong", text="Số Lượng")
         self.tree_ds.heading("giaSP", text="Giá Sản Phẩm")
         self.tree_ds.heading("tacGia", text="Tác Giả")
         self.tree_ds.heading("nhaXuatBan", text="Xuất Bản")
-        self.tree_ds.heading("trangThai", text="Trạng Thai")
+        self.tree_ds.heading("trangThai", text="Trạng Thái")
 
         self.tree_ds.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -409,27 +408,18 @@ class SanPhamGUI(tk.Frame):
         # Tải lại danh sách trước khi tìm
         self.load_products_from_sql()
 
-        search_term = self.entry_search.get().strip()
+        product_code = self.entry_search.get().strip()
         results = []
         
         # Kiểm tra nếu trường tìm kiếm trống
-        if not search_term:
-            messagebox.showinfo("Thông báo", "Vui lòng nhập từ khóa tìm kiếm.")
+        if not product_code:
+            messagebox.showinfo("Thông báo", "Vui lòng nhập mã sản phẩm.")
             return
         
-        # Tìm sản phẩm theo mã hoặc tên
+        # Chỉ tìm sản phẩm theo mã chính xác
         for prod in self.products:
             # Tìm theo mã sản phẩm chính xác
-            if str(prod["maSP"]) == search_term:
-                results.append(prod)
-            # Tìm theo tên có chứa từ khóa (không phân biệt hoa thường)
-            elif search_term.lower() in str(prod["tenSP"]).lower():
-                results.append(prod)
-            # Tìm theo tác giả
-            elif search_term.lower() in str(prod["tacGia"]).lower():
-                results.append(prod)
-            # Tìm theo nhà xuất bản
-            elif search_term.lower() in str(prod["nhaXuatBan"]).lower():
+            if str(prod["maSP"]) == product_code:
                 results.append(prod)
         
         # Xóa dữ liệu cũ
@@ -448,9 +438,9 @@ class SanPhamGUI(tk.Frame):
             ))
 
         if not results:
-            messagebox.showinfo("Thông báo", "Không tìm thấy sản phẩm phù hợp.")
+            messagebox.showinfo("Thông báo", "Không tìm thấy sản phẩm với mã này.")
         else:
-            messagebox.showinfo("Thông báo", f"Tìm thấy {len(results)} sản phẩm phù hợp.")
+            messagebox.showinfo("Thông báo", f"Tìm thấy sản phẩm với mã: {product_code}")
     def delete_product(self):
         maSP = self.entry_delete_id.get().strip()
         

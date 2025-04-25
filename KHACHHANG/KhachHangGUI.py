@@ -138,7 +138,7 @@ class KhachHangGUI(tk.Frame):
         btn_search = tk.Button(frame, text="Tìm kiếm", command=self.search_customer)
         btn_search.grid(row=0, column=2, padx=10, pady=10)
         
-        columns = ("maKH", "tenKH", "diaChi", "dienThoai")
+        columns = ("Mã KH", "Tên KH", "Địa Chỉ", "Điện Thoại")
         self.tree = ttk.Treeview(frame, columns=columns, show="headings")
         for col in columns:
             self.tree.heading(col, text=col)
@@ -152,7 +152,7 @@ class KhachHangGUI(tk.Frame):
         btn_refresh = tk.Button(frame, text="Tải lại danh sách", command=self.load_all_customers)
         btn_refresh.pack(pady=10)
 
-        columns = ("maKH", "tenKH", "diaChi", "dienThoai")
+        columns = ("Mã KH", "Tên KH", "Địa Chỉ", "Điện Thoại")
         self.tree_ds = ttk.Treeview(frame, columns=columns, show="headings")
         for col in columns:
             self.tree_ds.heading(col, text=col)
