@@ -1,27 +1,46 @@
 class NhanVien:
-    def __init__(self, maNV, hoten, dchi, sdt, luong, chucvu, trangthai):
+    def __init__(self, maNV="", tenNV="", diaChi="", SĐT="", luong=0.0, chucVu="", trangThai=""):
         self.maNV = maNV
-        self.hoten = hoten
-        self.dchi = dchi
-        self.sdt = sdt
+        self.tenNV = tenNV
+        self.diaChi = diaChi
+        self.SĐT = SĐT
         self.luong = luong
-        self.chucvu = chucvu
-        self.trangthai = trangthai  # 0: Nghỉ việc, 1: Đang làm việc
+        self.chucVu = chucVu
+        self.trangThai = trangThai
 
-    def nhap_thong_tin(self):
+    def nhap(self):
+        """Nhập thông tin nhân viên từ bàn phím"""
         self.maNV = input("Nhập mã nhân viên: ")
-        self.hoten = input("Nhập họ tên: ")
-        self.dchi = input("Nhập địa chỉ: ")
-        self.sdt = input("Nhập số điện thoại: ")
-        self.luong = float(input("Nhập lương: "))
-        self.chucvu = input("Nhập chức vụ: ")
-        self.trangthai = int(input("Nhập trạng thái (0: Nghỉ việc, 1: Đang làm việc): "))
+        self.tenNV = input("Nhập họ tên của nhân viên: ")
+        self.diaChi = input("Nhập địa chỉ: ")
+        self.SĐT = input("Nhập số điện thoại: ")
 
-    def xuat_thong_tin(self):
+        while True:
+            try:
+                self.luong = float(input("Nhập lương: "))
+                break
+            except ValueError:
+                print("Lương phải là số! Vui lòng nhập lại.")
+
+        self.chucVu = input("Nhập chức vụ: ")
+
+        while True:
+            self.trangThai = input("Nhập trạng thái (1: còn làm, 0: nghỉ làm): ")
+            if self.trangThai in ("0", "1"):
+                break
+            else:
+                print("Trạng thái không hợp lệ! Vui lòng nhập lại.")
+
+    def xuat(self):
+        """Xuất thông tin nhân viên ra màn hình"""
         print(f"Mã NV: {self.maNV}")
-        print(f"Họ tên: {self.hoten}")
-        print(f"Địa chỉ: {self.dchi}")
-        print(f"SĐT: {self.sdt}")
+        print(f"Họ tên: {self.tenNV}")
+        print(f"Địa chỉ: {self.diaChi}")
+        print(f"Số điện thoại: {self.SĐT}")
         print(f"Lương: {self.luong}")
-        print(f"Chức vụ: {self.chucvu}")
-        print(f"Trạng thái: {'Đang làm việc' if self.trangthai == 1 else 'Nghỉ việc'}")
+        print(f"Chức vụ: {self.chucVu}")
+        print(f"Trạng thái: {self.trangThai}")
+
+    def __str__(self):
+        """Trả về chuỗi thông tin nhân viên"""
+        return f"{self.maNV} | {self.tenNV} | {self.diaChi} | {self.SĐT} | {self.luong} | {self.chucVu} | {self.trangThai}"
