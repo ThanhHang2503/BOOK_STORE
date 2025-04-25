@@ -1,9 +1,11 @@
 # face_utils.py
+import base64
 import io
 
 import cv2
-from PIL import Image
 import numpy as np
+from PIL import Image
+
 
 def detect_face(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -15,6 +17,16 @@ def crop_face(image, face):
     x, y, w, h = face
     return image[y:y+h, x:x+w]
 
+def load_image_from_base64(base64_string):
+    """Load an image from a base64 string"""
+    # Decode base64 string
+    img_bytes = base64.b64decode(base64_string)
+    # Convert bytes to numpy array
+    nparr = np.frombuffer(img_bytes, np.uint8)
+    # Decode image
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    return img
+
 # Tải dữ liệu từ Hugging Face (nếu cần)
 if __name__ == "__main__":
     from NHANDIEN.dataset import tai_dataset
@@ -23,12 +35,10 @@ if __name__ == "__main__":
     print(df.head())
 
     # Lấy ảnh đầu tiên trong DataFrame
-    img_bytes = df.iloc[0]['image']['bytes']
+    img_base64 = df.iloc[0]['image']['bytes']
 
-    # Chuyển bytes thành ảnh OpenCV
-    image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-    image = np.array(image)
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    # Load ảnh từ base64
+    image = load_image_from_base64(img_base64)
 
     # Phát hiện khuôn mặt
     faces = detect_face(image)

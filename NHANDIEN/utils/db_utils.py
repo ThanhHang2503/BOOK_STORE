@@ -2,7 +2,7 @@ import sqlite3
 
 import numpy as np
 
-from NHANDIEN.config import DB_PATH
+from NHANDIEN.utils.config import DB_PATH
 
 
 def init_db():
@@ -12,18 +12,17 @@ def init_db():
     
     # Create members table
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS members (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        face_embedding BLOB NOT NULL,
-        registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
+    CREATE TABLE IF NOT EXISTS THANHVIEN (
+        ma INTEGER PRIMARY KEY AUTOINCREMENT,
+        hoten TEXT NOT NULL,
+        face_embedding BLOB NOT NULL
+        )
     ''')
     
     conn.commit()
     conn.close()
 
-def add_member(name, face_embedding):
+def add_member(hoten, face_embedding):
     """Add a new member to the database"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -32,8 +31,8 @@ def add_member(name, face_embedding):
     face_bytes = face_embedding.tobytes()
     
     cursor.execute(
-        "INSERT INTO members (name, face_embedding) VALUES (?, ?)",
-        (name, face_bytes)
+        "INSERT INTO members (hoten, face_embedding) VALUES (?, ?)",
+        (hoten, face_bytes)
     )
     
     conn.commit()
@@ -44,13 +43,13 @@ def get_all_members():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    cursor.execute("SELECT id, name, face_embedding FROM members")
+    cursor.execute("SELECT ma, hoten, face_embedding FROM members")
     members = []
     
     for row in cursor.fetchall():
-        id, name, face_bytes = row
+        ma, hoten, face_bytes = row
         face_embedding = np.frombuffer(face_bytes, dtype=np.float32)
-        members.append((id, name, face_embedding))
+        members.append((ma, hoten, face_embedding))
     
     conn.close()
     return members
@@ -64,12 +63,12 @@ def find_matching_member(face_embedding, threshold=0.6):
     best_match = None
     best_score = float('inf')
     
-    for id, name, member_embedding in members:
+    for ma, hoten, member_embedding in members:
         # Calculate Euclidean distance between embeddings
         distance = np.linalg.norm(face_embedding - member_embedding)
         if distance < best_score:
             best_score = distance
-            best_match = (id, name, distance)
+            best_match = (ma, hoten, distance)
     
     # Return match if it's below threshold
     if best_match and best_match[2] < threshold:
