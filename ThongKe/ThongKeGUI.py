@@ -1,17 +1,20 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
-from datetime import datetime, date, time
+from datetime import date, datetime, time
+from tkinter import messagebox, ttk
 
-from ThongKeDAO import ThongKeDAO
-from ThongKeBUSS import ThongKeBUSS
+from dill.pointers import parent
+
+from .ThongKeBUSS import ThongKeBUSS
+from .ThongKeDAO import ThongKeDAO
+
 
 class ThongKeGUI:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Thống Kê Hóa Đơn")
-        self.root.geometry("1000x600")
-        self.root.configure(bg="#f0f0f0")
-        
+    def __init__(self, parent):
+        self.parent = parent
+        self.frame = ttk.Frame(self.parent)
+        self.frame.grid(row=0, column=0, sticky="nsew")
+        self.frame.grid_remove()
+
         # Khởi tạo DAO và BUSS
         self.thongke_dao = ThongKeDAO()
         self.thongke_buss = ThongKeBUSS()
@@ -83,8 +86,10 @@ class ThongKeGUI:
     
     def create_widgets(self):
         # Frame chính
-        main_frame = tk.Frame(self.root, bg="#f0f0f0")
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        main_frame = tk.Frame(self.parent, bg="#f0f0f0")
+        #de chay giao dien trong menu
+        main_frame = self.frame
+        # main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # Tiêu đề
         title_label = tk.Label(main_frame, text="THỐNG KÊ HÓA ĐƠN", font=("Arial", 16, "bold"), bg="#f0f0f0")
@@ -306,12 +311,18 @@ class ThongKeGUI:
         # Đóng kết nối cơ sở dữ liệu trước khi thoát
         self.thongke_dao.close()
         self.root.destroy()
+        
+    def anGiaoDien(self):
+        """Ẩn giao diện quản lý hóa đơn"""
+        self.frame.grid_forget()
+
+    def hienThi(self):
+        self.frame.grid()
+
 
 # Hàm chạy ứng dụng
-def run_app():
+if __name__=="__main__":
     root = tk.Tk()
+    root.title("Thống kê doanh thu")
     app = ThongKeGUI(root)
     root.mainloop()
-
-if __name__ == "__main__":
-    run_app()

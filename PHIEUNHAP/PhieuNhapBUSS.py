@@ -1,6 +1,6 @@
 from datetime import datetime
-from PhieuNhapDAO import PhieuNhapDAO
-from CTPhieuNhapBUSS import CTPhieuNhapBUSS
+from .PhieuNhapDAO import PhieuNhapDAO
+from .CTPhieuNhapBUSS import CTPhieuNhapBUSS
 
 class PhieuNhapBUSS:
     def __init__(self):

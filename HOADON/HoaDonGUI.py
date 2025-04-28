@@ -1,11 +1,11 @@
 import tkinter as tk
 from datetime import datetime
-from tkinter import messagebox, ttk
+from tkinter import PhotoImage, messagebox, ttk
 
+from HOADON.ChiTietHD import ChiTietHD
 
 from .DSCTHoaDon import DSCTHoaDon
 from .DSHoaDon import DSHoaDon
-from HOADON.ChiTietHD import ChiTietHD
 from .HoaDon import HoaDon
 
 
@@ -49,8 +49,7 @@ class HoaDonGUI:
 
             # Thêm dữ liệu mới vào TreeView
             for hd in dsHoaDon:
-                self.tree.insert("", "end", values=(
-                    hd.maHD, hd.maNV, hd.maKH, hd.tongTien, hd.ngayTaoHD))
+                self.tree.insert("", "end", values=(hd.maHD, hd.maNV, hd.maKH, hd.tongTien, hd.ngayTaoHD, "👁"))
 
             # Đảm bảo frame hiển thị đúng
             self.frame_danh_sach.grid(row=3, column=0, sticky="nsew", padx=10, pady=10)
@@ -493,9 +492,13 @@ class HoaDonGUI:
         self.frame_danh_sach = ttk.LabelFrame(self.frame, text="Danh sách hóa đơn")
 
         # Tạo Treeview để hiển thị danh sách
-        self.tree = ttk.Treeview(self.frame_danh_sach, columns=(
-        "maHD", "maNV", "maKH", "tongTien", "ngayTaoHD", "chiTiet"),
-            show="headings", height=15)
+        self.tree = ttk.Treeview(
+            self.frame_danh_sach,
+            columns=("maHD", "maNV", "maKH", "tongTien", "ngayTaoHD", "chiTiet"),
+            displaycolumns=("maHD", "maNV", "maKH", "tongTien", "ngayTaoHD", "chiTiet"),
+            show="headings",
+            height=15
+        )
         self.tree.heading("maHD", text="Mã hóa đơn")
         self.tree.heading("maNV", text="Mã nhân viên")
         self.tree.heading("maKH", text="Mã khách hàng")
@@ -504,12 +507,12 @@ class HoaDonGUI:
         self.tree.heading("chiTiet", text="Chi tiết")
 
         # Thiết lập độ rộng cột
-        self.tree.column("maHD", width=100)
-        self.tree.column("maNV", width=100)
-        self.tree.column("maKH", width=100)
-        self.tree.column("tongTien", width=150)
-        self.tree.column("ngayTaoHD", width=150)
-        self.tree.column("chiTiet", width=100)
+        self.tree.column("maHD", width=100, anchor="center")
+        self.tree.column("maNV", width=100, anchor="center")
+        self.tree.column("maKH", width=100, anchor="center")
+        self.tree.column("tongTien", width=150, anchor="center")
+        self.tree.column("ngayTaoHD", width=150, anchor="center")
+        self.tree.column("chiTiet", width=100, anchor="center")
 
         # Thêm thanh cuộn
         scrollbar_y = ttk.Scrollbar(self.frame_danh_sach, orient="vertical", command=self.tree.yview)
@@ -523,7 +526,7 @@ class HoaDonGUI:
 
         # Bắt sự kiện khi chọn một hóa đơn trong danh sách
         self.tree.bind("<<TreeviewSelect>>", self.chonHD)
-        self.tree.bind("<Double-1>", self.xemChiTietHD)
+        self.tree.bind("<Button-1>", self.xuLyClickXemHD)
 
         # Frame hiển thị trạng thái (sẽ được tạo khi cần)
         self.frame_trang_thai = None
@@ -532,6 +535,22 @@ class HoaDonGUI:
         entries = [self.entry_maHD, self.entry_maNV, self.entry_maKH, self.entry_tongTien, self.entry_ngayTao]
         for entry in entries:
             entry.bind("<Return>", self.diChuyen)
+
+    def xuLyClickXemHD(self, event):
+        region = self.tree.identify("region", event.x, event.y)
+        if region=="cell":
+            col = self.tree.identify_column(event.x)
+            row = self.tree.identify_row(event.y)
+            print(f"Click vào cột: {col}, dòng: {row}")
+            if col=="#6":
+                if row:
+                    item = self.tree.item(row)
+                    values = item["values"]
+                    print(f"Giá trị dòng: {values}")
+                    maHD = values[0]
+                    print(f"Mã hóa đơn được chọn: {maHD}")
+                    self.xemChiTietHD(maHD)
+
 
     def chonHD(self, event):
         """Xử lý sự kiện khi chọn một hóa đơn trong danh sách"""

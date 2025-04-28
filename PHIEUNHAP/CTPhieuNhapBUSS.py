@@ -1,5 +1,7 @@
 from datetime import datetime
-from CTPhieuNhapDAO import CTPhieuNhapDAO 
+
+from .CTPhieuNhapDAO import CTPhieuNhapDAO
+
 
 class CTPhieuNhapBUSS:
     def __init__(self):

@@ -7,9 +7,13 @@ class ThongKeDAO:
         self.conn = self.connect_db()  
 
     def connect_db(self):
-        conn = pyodbc.connect('DRIVER={SQL Server};'
-                              r'SERVER=DESKTOP-SG8M886\SQLEXPRESS;'  
-                              'DATABASE=DOANPYTHON;')  
+        conn = pyodbc.connect(
+            "DRIVER={ODBC Driver 17 for SQL Server};"
+            "SERVER=DESKTOP-NRE55H1;"
+            "DATABASE=DOANPYTHON;"
+            "Trusted_Connection=yes;"
+            "Connection Timeout=30;"
+        )
         return conn
 
     def lay_du_lieu_tu_sql(self):

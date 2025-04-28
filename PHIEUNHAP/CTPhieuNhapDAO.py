@@ -1,5 +1,7 @@
 import pyodbc
-from ChiTietPhieuNhapDTO import ChiTietPhieuNhapDTO
+
+from .ChiTietPhieuNhapDTO import ChiTietPhieuNhapDTO
+
 
 class CTPhieuNhapDAO:
     def __init__(self):
@@ -7,10 +9,11 @@ class CTPhieuNhapDAO:
 
     def connect_db(self):
         return pyodbc.connect(
-            'DRIVER={SQL Server};'
-            'SERVER=DESKTOP-SG8M886\\SQLEXPRESS;'
-            'DATABASE=DOANPYTHON;'
-            'Trusted_Connection=yes;'
+            "DRIVER={ODBC Driver 17 for SQL Server};"
+            "SERVER=DESKTOP-NRE55H1;"
+            "DATABASE=DOANPYTHON;"
+            "Trusted_Connection=yes;"
+            "Connection Timeout=30;"
         )
 
     def lay_du_lieu_tu_sql(self):

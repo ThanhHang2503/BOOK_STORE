@@ -1,43 +1,32 @@
 import tkinter as tk
-from tkinter import messagebox
-from tkinter import ttk
 from datetime import datetime
-from PhieuNhapBUSS import PhieuNhapBUSS
-from CTPhieuNhapBUSS import CTPhieuNhapBUSS
+from tkinter import messagebox, ttk
+
+from .CTPhieuNhapBUSS import CTPhieuNhapBUSS
+from .PhieuNhapBUSS import PhieuNhapBUSS
+
 
 class PhieuNhapGUI:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Quản Lý Phiếu Nhập")
 
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        self.root.geometry(f"{screen_width}x{screen_height}")
+    def __init__(self, parent):
+        self.parent = parent
+        self.frame = ttk.Frame(self.parent)
+        self.frame.grid(row=0, column=0, sticky="nsew")
+        self.frame.grid_remove()
 
         self.phieu_nhap_buss = PhieuNhapBUSS()
         self.phieu_nhap_buss.lay_du_lieu_tu_sql()
         self.ctphieu_nhap_buss = CTPhieuNhapBUSS()
         self.ctphieu_nhap_buss.lay_du_lieu_tu_sql()
 
+        self.frame_title = tk.Frame(self.frame)
+        self.frame_title.grid(row=0, column=0, pady=10)
 
-        self.frame_title = tk.Frame(root)
-        self.frame_title.pack(pady=10, fill="x", padx=10)
-
-        self.btn_them = tk.Button(self.frame_title, text="Thêm", command=self.hien_thi_them, bg="#FFCAd4")
-        self.btn_them.pack(side="left", fill="both", expand=True)
-        self.btn_sua = tk.Button(self.frame_title, text="Sửa", command=self.hien_thi_sua, bg="#FFCAd4")
-        self.btn_sua.pack(side="left", fill="both", expand=True)
-        self.btn_tim = tk.Button(self.frame_title, text="Tìm kiếm", command=self.hien_thi_tim, bg="#FFCAd4")
-        self.btn_tim.pack(side="left", fill="both", expand=True)
-        self.btn_in = tk.Button(self.frame_title, text="In danh sách", command=self.hien_thi_in_danh_sach, bg="#FFCAd4")
-        self.btn_in.pack(side="left", fill="both", expand=True)
-
-        self.frame_thong_tin = tk.Frame(root)
-        self.frame_thong_tin.pack(fill="both", expand=True, padx=20, pady=20)
+        self.frame_thong_tin = tk.Frame(self.frame)
+        self.frame_thong_tin.grid(row=1, column=0, padx=20, pady=20, sticky="nsew")
 
         self.hien_thi_them()
-   
- 
+
     def xoa_thong_tin_frame(self):
         for widget in self.frame_thong_tin.winfo_children():
             widget.destroy()
@@ -86,7 +75,7 @@ class PhieuNhapGUI:
         self.phieu_nhap_buss.them(maPN, ngayNhap, nhaCungCap, tongTien)
         messagebox.showinfo("Thông báo", "Thêm phiếu nhập thành công!")
         self.hien_thi_danh_sach()
-        
+
 
     def hien_thi_sua(self):
         self.xoa_thong_tin_frame()
@@ -199,11 +188,11 @@ class PhieuNhapGUI:
             soLuong_moi = int(entry_soLuong.get())
             donGia_moi = float(entry_donGia.get())
             thanhTien_moi = soLuong_moi * donGia_moi
-            
+
             selected = self.tree_ct.selection()
             if selected:
                 self.tree_ct.item(selected[0], values=(maPN, maSP, soLuong_moi, donGia_moi, thanhTien_moi))
-                
+
             win.destroy()
             messagebox.showinfo("Thành công", "Cập nhật chi tiết phiếu nhập thành công.")
         except ValueError:
@@ -284,7 +273,7 @@ class PhieuNhapGUI:
             return
 
         ket_qua_sua_phieu_nhap = self.phieu_nhap_buss.sua_phieu_nhap(maPN, ngayTao, maNV, tongTien)
-     
+
         if ket_qua_sua_phieu_nhap:
             for item in self.tree_ct.get_children():
                 values = self.tree_ct.item(item, 'values')
@@ -293,17 +282,17 @@ class PhieuNhapGUI:
                 donGia_moi = float(donGia)
                 thanhTien_moi = soLuong_moi * donGia_moi
                 ket_qua_ct = self.ctphieu_nhap_buss.sua(maPN_ct, maSP, soLuong_moi, donGia_moi, thanhTien_moi)
-                
+
                 if not ket_qua_ct:
                     messagebox.showerror("Lỗi", f"Cập nhật chi tiết phiếu nhập cho sản phẩm {maSP} thất bại.")
                     return
 
             messagebox.showinfo("Thành công", "Cập nhật phiếu nhập và chi tiết phiếu nhập vào cơ sở dữ liệu thành công.")
-            self.hien_thi_sua() 
+            self.hien_thi_sua()
         else:
             messagebox.showerror("Lỗi", "Không thể cập nhật phiếu nhập.")
 
-    
+
     def hien_thi_tim(self):
         self.xoa_thong_tin_frame()
 
@@ -397,16 +386,16 @@ class PhieuNhapGUI:
         self.treeview.bind("<<TreeviewSelect>>", self.hien_thi_chi_tiet_phieu_nhap)
 
         self.hien_thi_danh_sach()
-        
-        
+
+
     def hien_thi_danh_sach(self):
         for item in self.treeview.get_children():
             self.treeview.delete(item)
 
         for phieu in self.phieu_nhap_buss.dsphieunhap:
             self.treeview.insert("", "end", values=(phieu[0], phieu[1], phieu[2], phieu[3]))
-            
-            
+
+
     def hien_thi_chi_tiet_phieu_nhap(self, event):
         selected = self.treeview.focus()
         values = self.treeview.item(selected, "values")
@@ -438,10 +427,25 @@ class PhieuNhapGUI:
         tree_ctpn.column("Thành Tiền", width=100)
         for ct in self.ctphieu_nhap_buss.dsctpn:
             if str(ct.maPN) == str(maPN):
-                tree_ctpn.insert("", "end", values=(ct.maSP, ct.soLuong, ct.donGia, ct.thanhTien))     
-       
+                tree_ctpn.insert("", "end", values=(ct.maSP, ct.soLuong, ct.donGia, ct.thanhTien))
 
-    
+    def anGiaoDien(self):
+        """Ẩn giao diện quản lý hóa đơn"""
+        self.frame.grid_forget()
+
+    def hienThi(self, action=None):
+        """Hiển thị giao diện tương ứng với action"""
+        self.frame.grid(row=0, column=0, sticky="nsew")
+        if action=="Tạo phiếu nhập":
+            self.hien_thi_them()
+        elif action=="Tìm kiếm phiếu nhập":
+            self.hien_thi_tim()
+        elif action=="Sửa phiếu nhập":
+            self.hien_thi_sua()
+        elif action=="Hiển thị danh sách":
+            self.hien_thi_in_danh_sach()
+
+
 # Main Program
 if __name__ == "__main__":
     root = tk.Tk()

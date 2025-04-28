@@ -3,7 +3,8 @@ from tkinter import ttk
 
 from HOADON.HoaDonGUI import HoaDonGUI
 from NHANVIEN.NhanVienGUI import NhanVienGUI
-
+from PHIEUNHAP.PhieuNhapGUI import PhieuNhapGUI
+from ThongKe.ThongKeGUI import ThongKeGUI
 
 root = tk.Tk()
 root.title("***********QUẢN LÍ CỬA HÀNG*********")
@@ -38,51 +39,67 @@ options = {
     "Quản Lí Hóa đơn": ["Tạo hóa đơn", "Sửa hóa đơn", "Tìm kiếm hóa đơn", "Hiển thị hóa đơn"],
     "Quản Lí Khách hàng": ["Thêm khách hàng", "Sửa thông tin khách hàng", "Tìm kiếm khách hàng"],
     "Quản Lí Sách": ["Thêm sản phẩm", "Sửa thông tin sản phẩm", "Tìm kiếm sản phẩm", "Trạng Thái"],
-    "Thống Kê Doanh thu": ["Báo cáo ngày", "Báo cáo quý", "Báo cáo năm"],
-    "Quản Lí Phiếu nhập": ["Tạo phiếu nhập", "Tìm kiếm phiếu nhập", "Sửa phiếu nhập"]
+    "Thống Kê Doanh thu": [],
+    "Quản Lí Phiếu nhập": ["Tạo phiếu nhập", "Tìm kiếm phiếu nhập", "Sửa phiếu nhập", "Hiển thị danh sách"]
 }
 
 nhan_vien_gui = NhanVienGUI(main_frame)
 hoa_don_gui = HoaDonGUI(main_frame)
+phieu_nhap_gui = PhieuNhapGUI(main_frame)
+thong_ke_gui = ThongKeGUI(main_frame)
+
 nhan_vien_gui.anGiaoDien()
 hoa_don_gui.anGiaoDien()
+phieu_nhap_gui.anGiaoDien()
+thong_ke_gui.anGiaoDien()
 
 empty_frame = tk.Frame(main_frame)
 
-
-def quanLy(gui_object, action):
+def quanLy(gui_object, action=None):
     # Ẩn tất cả giao diện cũ
     for widget in main_frame.winfo_children():
         widget.grid_forget()
 
-    # Cấu hình `main_frame` để căn giữa nội dung
+    # Cấu hình main_frame để căn giữa nội dung
     main_frame.grid_rowconfigure(0, weight=1)
     main_frame.grid_columnconfigure(0, weight=1)
 
-    if gui_object:  # Kiểm tra nếu giao diện có tồn tại
-        gui_object.hienThi(action)
-        gui_object.frame.grid(row=0, column=0, sticky="nsew", padx=100, pady=100)
+    if gui_object:
+        if gui_object == phieu_nhap_gui and action is None:
+            # Nếu chọn "Quản Lí Phiếu nhập" lần đầu chưa có action -> chỉ hiện danh sách
+            gui_object.hien_thi_in_danh_sach()
+            gui_object.frame.grid(row=0, column=0, sticky="nsew", padx=100, pady=100)
+        else:
+            gui_object.hienThi(action)
+            gui_object.frame.grid(row=0, column=0, sticky="nsew", padx=100, pady=100)
     else:
-        # Tạo frame trống nếu giao diện chưa có
         empty_frame = tk.Frame(main_frame)
         empty_frame.grid(row=0, column=0, sticky="nsew", padx=100, pady=100)
 
-
 def taoMenu(parent, label, values):
     frame = tk.Frame(parent, bd=2, relief="ridge")
-    menubutton = ttk.Menubutton(frame, text=label, direction="below")
-    menu = tk.Menu(menubutton, tearoff=0)
-    menubutton.config(menu=menu)
 
-    for item in values:
-        if label == "Quản Lí Nhân viên":
-            menu.add_command(label=item, command=lambda i=item: quanLy(nhan_vien_gui, i))
-        elif label == "Quản Lí Hóa đơn":
-            menu.add_command(label=item, command=lambda i=item: quanLy(hoa_don_gui, i))
-        else:
-            menu.add_command(label=item, command=lambda i=item: quanLy(None, i))  # Giao diện trống
+    if label == "Thống Kê Doanh thu":
+        button = tk.Button(frame, text=label, command=lambda: quanLy(thong_ke_gui))
+        button.pack(fill="both", expand=True)
+    else:
+       
+        menubutton = ttk.Menubutton(frame, text=label, direction="below")
+        menu = tk.Menu(menubutton, tearoff=0)
+        menubutton.config(menu=menu)
 
-    menubutton.pack(fill="both", expand=True)
+        for item in values:
+            if label == "Quản Lí Nhân viên":
+                menu.add_command(label=item, command=lambda i=item: quanLy(nhan_vien_gui, i))
+            elif label == "Quản Lí Hóa đơn":
+                menu.add_command(label=item, command=lambda i=item: quanLy(hoa_don_gui, i))
+            elif label == "Quản Lí Phiếu nhập":
+                menu.add_command(label=item, command=lambda i=item: quanLy(phieu_nhap_gui, i))
+            else:
+                menu.add_command(label=item, command=lambda i=item: quanLy(None, i))
+
+        menubutton.pack(fill="both", expand=True)
+
     return frame
 
 
