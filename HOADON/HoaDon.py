@@ -16,9 +16,16 @@ class HoaDon:
         self.maKH = maKH
         self.tongTien = tongTien
 
-    # def tinhTongTien(self):
-    #     """Tính tổng tiền hóa đơn"""
-    #     return sum(sp['soluong'] * sp['gia'] for sp in self.sanPham)
+    def tinhTongTien(self, cursor):
+        """Tính tổng tiền hóa đơn từ chi tiết"""
+        try:
+            cursor.execute("SELECT thanhTien FROM CHITIETHD WHERE maHD = ?", (self.maHD,))
+            rows = cursor.fetchall()
+            self.tongTien = sum(row[0] for row in rows) if rows else 0
+            return self.tongTien
+        except Exception as e:
+            print(f"Lỗi khi tính tổng tiền: {e}")
+            return 0
 
     def xuat(self):
         """Xuất thông tin hóa đơn"""

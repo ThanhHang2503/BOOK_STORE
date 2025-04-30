@@ -1,5 +1,9 @@
-import tkinter as tk
 import math
+import os
+import subprocess
+import sys
+import tkinter as tk
+from tkinter import messagebox
 
 # Cấu hình màu sắc
 BG_COLOR = "#f8f9fa"
@@ -52,13 +56,11 @@ def draw_light_bars():
         line = canvas.create_line(x0, y0, x1, y1, fill="#fce4ec", width=BAR_WIDTH, capstyle="round")
         bars.append(line)
 
-
-# Tạo hiệu ứng ánh sáng chạy vòng - bắt đầu nhạt và đậm dần khi di chuyển
+# Tạo hiệu ứng ánh sáng chạy vòng
 def animate_bars():
     global light_index
     for i in range(BAR_COUNT):
         distance = min(abs(i - light_index), BAR_COUNT - abs(i - light_index))
-        # hieu chinh mau sac
         if distance < 5:
             r = 240
             g = 98
@@ -70,12 +72,10 @@ def animate_bars():
             b = 177
             color = f"#{r:02x}{g:02x}{b:02x}"
         elif distance < 15:
-
             r = 248
             g = 187
             b = 208
             color = f"#{r:02x}{g:02x}{b:02x}"
-
         else:
             r = 252
             g = 228
@@ -85,8 +85,7 @@ def animate_bars():
         canvas.itemconfig(bars[i], fill=color)
 
     light_index = (light_index + 1) % BAR_COUNT
-    root.after(50, animate_bars)
-
+    root.after_id = root.after(50, animate_bars)  # Lưu ID của animation
 
 # Vẽ các thanh sáng
 draw_light_bars()
@@ -146,7 +145,6 @@ def tao(parent, placeholder, show=None):
 
     return entry
 
-
 tk.Canvas.bogoc = lambda self, x1, y1, x2, y2, radius, **kwargs: self.create_polygon(
     x1 + radius, y1,
     x2 - radius, y1,
@@ -165,49 +163,42 @@ tk.Canvas.bogoc = lambda self, x1, y1, x2, y2, radius, **kwargs: self.create_pol
 email_entry = tao(form_frame, "Tên đăng nhập")
 password_entry = tao(form_frame, "Mật khẩu", show="*")
 
-forgot = tk.Label(form_frame, text="Quên mật khẩu?", fg=ACCENT_COLOR, bg=BG_COLOR, font=("Arial", 9))
-forgot.pack(pady=10)
+# Bắt đầu hiệu ứng
+animate_bars()
 
+def dang_nhap():
+    username = email_entry.get()
+    password = password_entry.get()
+    
+    if username == "1" and password == "1":
+        messagebox.showinfo("Thành công", "Đăng nhập thành công!")
+        
+        # Dừng animation trước khi đóng cửa sổ
+        if hasattr(root, 'after_id'):
+            root.after_cancel(root.after_id)
+        
+        root.destroy()  # Đóng cửa sổ đăng nhập
+        
+        # Import và chạy main.py trong cùng process
+        import main
+    else:
+        messagebox.showerror("Lỗi đăng nhập", "Sai tên đăng nhập hoặc mật khẩu")
 
-# Create login button with rounded corners
-def nutbogoc(parent, text, command=None):
-    button_frame = tk.Frame(parent, bg=BG_COLOR)
-    button_frame.pack(pady=10)
-
-    button_width = 300
-    button_height = 40
-
-    # Create canvas for button background
-    canvas = tk.Canvas(button_frame, width=button_width, height=button_height,
-        bg=BG_COLOR, highlightthickness=0)
-    canvas.pack()
-
-    # Draw rounded rectangle
-    canvas.bogoc(0, 0, button_width, button_height, 20, fill=BUTTON_COLOR, outline="")
-
-    # Add text
-    canvas.create_text(button_width / 2, button_height / 2, text=text, fill="white",
-        font=("Arial", 12, "bold"))
-
-    # Add click functionality
-    def on_click(event):
-        if command:
-            command()
-
-    canvas.bind("<Button-1>", on_click)
-    canvas.config(cursor="hand2")
-
-    return canvas
-
-
-login_btn = nutbogoc(form_frame, "Đăng nhập")
+# Add login button
+login_btn = tk.Button(form_frame, 
+                     text="Đăng nhập",
+                     font=("Arial", 12, "bold"),
+                     bg=BUTTON_COLOR,
+                     fg="white",
+                     command=dang_nhap,
+                     width=20,
+                     height=2)
+login_btn.pack(pady=20)
 
 # Thêm nút thoát
 exit_btn = tk.Button(root, text="X", font=("Arial", 12, "bold"), bg=BG_COLOR, fg=ACCENT_COLOR,
     relief="flat", cursor="hand2", command=root.destroy, borderwidth=0)
 exit_btn.place(x=screen_width - 40, y=10)
 
-# Bắt đầu hiệu ứng
-animate_bars()
-
-root.mainloop()
+if __name__ == "__main__":
+    root.mainloop()

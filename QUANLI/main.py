@@ -2,12 +2,14 @@ import tkinter as tk
 from tkinter import ttk
 
 from HOADON.HoaDonGUI import HoaDonGUI
+from KHACHHANG.KhachHangGUI import KhachHangGUI
 from NHANVIEN.NhanVienGUI import NhanVienGUI
 from PHIEUNHAP.PhieuNhapGUI import PhieuNhapGUI
+from SANPHAM.SanPhamGUI import SanPhamGUI
 from ThongKe.ThongKeGUI import ThongKeGUI
 
 root = tk.Tk()
-root.title("***********QUẢN LÍ CỬA HÀNG*********")
+root.title("***********QUẢN Lý CỬA HÀNG*********")
 
 # Lấy kích thước màn hình
 screen_width = root.winfo_screenwidth()
@@ -35,25 +37,30 @@ root.grid_rowconfigure(2, weight=1)
 root.grid_columnconfigure(0, weight=1)
 
 options = {
-    "Quản Lí Nhân viên": ["Thêm nhân viên", "Sửa thông tin nhân viên", "Tìm kiếm nhân viên", "Hiển thị danh sách"],
-    "Quản Lí Hóa đơn": ["Tạo hóa đơn", "Sửa hóa đơn", "Tìm kiếm hóa đơn", "Hiển thị hóa đơn"],
-    "Quản Lí Khách hàng": ["Thêm khách hàng", "Sửa thông tin khách hàng", "Tìm kiếm khách hàng"],
-    "Quản Lí Sách": ["Thêm sản phẩm", "Sửa thông tin sản phẩm", "Tìm kiếm sản phẩm", "Trạng Thái"],
+    "Quản Lý Nhân viên": ["Thêm nhân viên", "Sửa thông tin nhân viên", "Tìm kiếm nhân viên", "Hiển thị danh sách"],
+    "Quản Lý Hóa đơn": ["Tạo hóa đơn", "Sửa hóa đơn", "Tìm kiếm hóa đơn", "Hiển thị hóa đơn"],
+    "Quản Lý Khách hàng": ["Thêm khách hàng", "Sửa thông tin khách hàng", "Tìm kiếm khách hàng", "Xóa khách hàng", "Hiển thị danh sách"],
+    "Quản Lý Sách": ["Thêm sản phẩm", "Sửa thông tin sản phẩm", "Tìm kiếm sản phẩm", "Danh sách sản phẩm"],
     "Thống Kê Doanh thu": [],
-    "Quản Lí Phiếu nhập": ["Tạo phiếu nhập", "Tìm kiếm phiếu nhập", "Sửa phiếu nhập", "Hiển thị danh sách"]
+    "Quản Lý Phiếu nhập": ["Tạo phiếu nhập", "Tìm kiếm phiếu nhập", "Sửa phiếu nhập", "Hiển thị danh sách"]
 }
 
 nhan_vien_gui = NhanVienGUI(main_frame)
 hoa_don_gui = HoaDonGUI(main_frame)
 phieu_nhap_gui = PhieuNhapGUI(main_frame)
 thong_ke_gui = ThongKeGUI(main_frame)
+khach_hang_gui = KhachHangGUI(main_frame)
+san_pham_gui = SanPhamGUI(main_frame)
 
 nhan_vien_gui.anGiaoDien()
 hoa_don_gui.anGiaoDien()
 phieu_nhap_gui.anGiaoDien()
 thong_ke_gui.anGiaoDien()
+khach_hang_gui.anGiaoDien()
+san_pham_gui.anGiaoDien()
 
 empty_frame = tk.Frame(main_frame)
+
 
 def quanLy(gui_object, action=None):
     # Ẩn tất cả giao diện cũ
@@ -65,36 +72,44 @@ def quanLy(gui_object, action=None):
     main_frame.grid_columnconfigure(0, weight=1)
 
     if gui_object:
-        if gui_object == phieu_nhap_gui and action is None:
-            # Nếu chọn "Quản Lí Phiếu nhập" lần đầu chưa có action -> chỉ hiện danh sách
+        if gui_object==phieu_nhap_gui and action is None:
+            # Nếu chọn "Quản Lý Phiếu nhập" lần đầu chưa có action -> chỉ hiện danh sách
             gui_object.hien_thi_in_danh_sach()
             gui_object.frame.grid(row=0, column=0, sticky="nsew", padx=100, pady=100)
         else:
             gui_object.hienThi(action)
-            gui_object.frame.grid(row=0, column=0, sticky="nsew", padx=100, pady=100)
+            # Handle SanPhamGUI differently since it inherits from tk.Frame
+            if isinstance(gui_object, SanPhamGUI):
+                gui_object.grid(row=0, column=0, sticky="nsew", padx=100, pady=100)
+            else:
+                gui_object.frame.grid(row=0, column=0, sticky="nsew", padx=100, pady=100)
     else:
         empty_frame = tk.Frame(main_frame)
         empty_frame.grid(row=0, column=0, sticky="nsew", padx=100, pady=100)
 
+
 def taoMenu(parent, label, values):
     frame = tk.Frame(parent, bd=2, relief="ridge")
 
-    if label == "Thống Kê Doanh thu":
+    if label=="Thống Kê Doanh thu":
         button = tk.Button(frame, text=label, command=lambda: quanLy(thong_ke_gui))
         button.pack(fill="both", expand=True)
     else:
-       
         menubutton = ttk.Menubutton(frame, text=label, direction="below")
         menu = tk.Menu(menubutton, tearoff=0)
         menubutton.config(menu=menu)
 
         for item in values:
-            if label == "Quản Lí Nhân viên":
+            if label=="Quản Lý Nhân viên":
                 menu.add_command(label=item, command=lambda i=item: quanLy(nhan_vien_gui, i))
-            elif label == "Quản Lí Hóa đơn":
+            elif label=="Quản Lý Hóa đơn":
                 menu.add_command(label=item, command=lambda i=item: quanLy(hoa_don_gui, i))
-            elif label == "Quản Lí Phiếu nhập":
+            elif label=="Quản Lý Phiếu nhập":
                 menu.add_command(label=item, command=lambda i=item: quanLy(phieu_nhap_gui, i))
+            elif label=="Quản Lý Khách hàng":
+                menu.add_command(label=item, command=lambda i=item: quanLy(khach_hang_gui, i))
+            elif label=="Quản Lý Sách":
+                menu.add_command(label=item, command=lambda i=item: quanLy(san_pham_gui, i))
             else:
                 menu.add_command(label=item, command=lambda i=item: quanLy(None, i))
 

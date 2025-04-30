@@ -316,8 +316,12 @@ class ThongKeGUI:
         """Ẩn giao diện quản lý hóa đơn"""
         self.frame.grid_forget()
 
-    def hienThi(self):
+    def hienThi(self, action=None):
+        """Hiển thị giao diện thống kê"""
         self.frame.grid()
+        if action:
+            # Handle any specific actions if needed
+            pass
 
 
 # Hàm chạy ứng dụng

@@ -1,171 +1,150 @@
 import pyodbc
-from KhachHang import KhachHang
+from KHACHHANG.KhachHang import KhachHang
+
 class DSKhachHang:
     def __init__(self):
-        # Danh sách chứa dữ liệu khách hàng (lấy từ SQL)
-        self.ds = []
-        # Kết nối đến cơ sở dữ liệu SQL Server
-        self.conn = self.connect_db()
+        self.customers = []
+        self.conn = self.ket_noi_sql()
 
-    def connect_db(self):
+    def ket_noi_sql(self):
+        """ Kết nối với SQL Server """
         try:
             conn = pyodbc.connect(
-                'DRIVER={SQL Server};'
-                'SERVER=localhost\\SQLEXPRESS;'
-                'DATABASE=DOANPYTHON;'
-                'Trusted_Connection=yes;'
+                "DRIVER={ODBC Driver 17 for SQL Server};"
+                "SERVER=DESKTOP-NRE55H1;"
+                "DATABASE=DOANPYTHON;"
+                "Trusted_Connection=yes;"
             )
+
+            print("✅ Kết nối SQL thành công!")
             return conn
-        except pyodbc.Error as e:
-            print("Lỗi kết nối CSDL:", e)
+        except Exception as e:
+            print(f"❌ Lỗi kết nối SQL: {e}")
             return None
 
-    def close_connection(self):
-        """Đóng kết nối đến CSDL khi không sử dụng."""
-        if self.conn is not None:
-            try:
-                self.conn.close()
-                print("Đã đóng kết nối CSDL.")
-            except pyodbc.Error as e:
-                print("Lỗi khi đóng kết nối CSDL:", e)
+    def lay_danh_sach_tu_sql(self):
+        """ Lấy danh sách khách hàng từ SQL Server """
+        if not self.conn:
+            print("❌ Không thể kết nối SQL.")
+            return
 
-    def load_data(self):
-        """Lấy dữ liệu khách hàng từ bảng KhachHang trong SQL Server."""
-        if self.conn is None:
-            print("Không có kết nối đến CSDL.")
-            return
+        cursor = self.conn.cursor()
         try:
-            cursor = self.conn.cursor()
-            query = "SELECT maKH, tenKH, diaChi, dienThoai FROM KhachHang"
-            cursor.execute(query)
-            self.ds = []
-            for row in cursor.fetchall():
-                kh = {
-                    "maKH": row[0],
-                    "tenKH": row[1],
-                    "diaChi": row[2],
-                    "dienThoai": row[3]
-                }
-                self.ds.append(kh)
-            cursor.close()
-        except pyodbc.Error as e:
-            print("Lỗi khi lấy dữ liệu:", e)
+            cursor.execute("SELECT * FROM KhachHang")
+            rows = cursor.fetchall()
 
-    def add_khachhang(self, maKH, tenKH, diaChi, dienThoai):
-        """Thêm khách hàng mới vào cơ sở dữ liệu và danh sách nội bộ."""
-        if any(kh["maKH"] == maKH for kh in self.ds):
-            print("Mã khách hàng đã tồn tại!")
+            self.customers.clear()  # Xóa danh sách cũ
+            for row in rows:
+                kh = KhachHang(*row)
+                self.customers.append(kh)
+
+            print(f"✅ Đã tải {len(self.customers)} khách hàng từ SQL!")
+        except Exception as e:
+            print(f"❌ Lỗi khi lấy danh sách khách hàng: {e}")
+
+    def them_khach_hang(self, khach_hang):
+        """ Thêm khách hàng vào database """
+        if not self.conn:
+            print("❌ Không thể kết nối SQL.")
             return
-        if self.conn is None:
-            print("Không có kết nối đến CSDL.")
-            return
+
+        cursor = self.conn.cursor()
         try:
-            cursor = self.conn.cursor()
-            query = "INSERT INTO KhachHang (maKH, tenKH, diaChi, dienThoai) VALUES (?, ?, ?, ?)"
-            cursor.execute(query, (maKH, tenKH, diaChi, dienThoai))
+            cursor.execute(
+                "INSERT INTO KhachHang (maKH, tenKH, diaChi, dienThoai) VALUES (?, ?, ?, ?)",
+                (khach_hang.maKH, khach_hang.tenKH, khach_hang.diaChi, khach_hang.dienThoai)
+            )
             self.conn.commit()
-            cursor.close()
-            # Cập nhật danh sách sau khi thêm
-            self.ds.append({
-                "maKH": maKH,
-                "tenKH": tenKH,
-                "diaChi": diaChi,
-                "dienThoai": dienThoai
-            })
-            print("Thêm khách hàng thành công!")
-        except pyodbc.Error as e:
-            print("Lỗi khi thêm khách hàng:", e)
-            self.conn.rollback()
+            print("✅ Khách hàng đã được thêm vào SQL!")
+        except Exception as e:
+            print(f"Lỗi thêm khách hàng: {e}")
 
-    def update_khachhang(self, maKH):
-        """Cập nhật thông tin khách hàng theo mã khách hàng."""
-        if self.conn is None:
-            print("Không có kết nối đến CSDL.")
+    def sua_thong_tin_khach_hang(self, ma_kh, ten_moi, dia_chi_moi, dien_thoai_moi):
+        """ Sửa thông tin khách hàng trong SQL """
+        if not self.conn:
+            print("❌ Không thể kết nối SQL.")
             return
-        for kh in self.ds:
-            if kh["maKH"] == maKH:
-                print("\nChọn thông tin cần sửa:")
-                print("1. Họ tên")
-                print("2. Địa chỉ")
-                print("3. Điện thoại")
-                option = input("Mời nhập lựa chọn: ")
-                new_value = None
-                col_name = None
-                if option == "1":
-                    new_value = input("Nhập họ tên mới: ")
-                    col_name = "tenKH"
-                elif option == "2":
-                    new_value = input("Nhập địa chỉ mới: ")
-                    col_name = "diaChi"
-                elif option == "3":
-                    new_value = input("Nhập số điện thoại mới: ")
-                    col_name = "dienThoai"
-                else:
-                    print("Lựa chọn không hợp lệ. Không có thay đổi.")
-                    return
-                try:
-                    cursor = self.conn.cursor()
-                    query = f"UPDATE KhachHang SET {col_name} = ? WHERE maKH = ?"
-                    cursor.execute(query, (new_value, maKH))
-                    self.conn.commit()
-                    cursor.close()
-                    # Cập nhật lại trong danh sách nội bộ
-                    kh[col_name] = new_value
-                    print("Sửa thông tin khách hàng thành công!")
-                except pyodbc.Error as e:
-                    print("Lỗi khi cập nhật khách hàng:", e)
-                    self.conn.rollback()
-                return
-        print("Không tìm thấy khách hàng!")
 
-    def delete_khachhang(self, maKH):
-        """Xóa khách hàng khỏi cơ sở dữ liệu và danh sách nội bộ."""
-        if self.conn is None:
-            print("Không có kết nối đến CSDL.")
-            return
-        if any(kh["maKH"] == maKH for kh in self.ds):
-            try:
-                cursor = self.conn.cursor()
-                query = "DELETE FROM KhachHang WHERE maKH = ?"
-                cursor.execute(query, (maKH,))
-                self.conn.commit()
-                cursor.close()
-                # Cập nhật lại danh sách nội bộ
-                self.ds = [kh for kh in self.ds if kh["maKH"] != maKH]
-                print("Xóa khách hàng thành công!")
-            except pyodbc.Error as e:
-                print("Lỗi khi xóa khách hàng:", e)
-                self.conn.rollback()
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(
+                "UPDATE KhachHang SET tenKH=?, diaChi=?, dienThoai=? WHERE maKH=?",
+                (ten_moi, dia_chi_moi, dien_thoai_moi, ma_kh)
+            )
+            self.conn.commit()
+            print("✅ Thông tin khách hàng đã được cập nhật!")
+        except Exception as e:
+            print(f"Lỗi cập nhật khách hàng: {e}")
+
+    def hien_thi_danh_sach(self):
+        """ Hiển thị danh sách khách hàng """
+        if not self.customers:
+            print("📌 Danh sách khách hàng trống.")
         else:
-            print("Không tìm thấy khách hàng!")
+            print("\n===== DANH SÁCH KHÁCH HÀNG =====")
+            for kh in self.customers:
+                kh.xuat_thong_tin()  # Giả sử class KhachHang có phương thức này
+                print("--------------------")
 
-    def search_khachhang(self, key):
-        """Tìm kiếm khách hàng dựa trên key trong các trường maKH, tenKH, diaChi, dienThoai."""
-        key = key.lower()
-        results = [kh for kh in self.ds if
-                   key in kh.get("tenKH", "").lower() or 
-                   key in kh.get("maKH", "").lower() or 
-                   key in kh.get("diaChi", "").lower() or 
-                   key in kh.get("dienThoai", "").lower()]
-        return results
+    def tim_khach_hang_theo_ma(self, ma_kh):
+        """ Tìm kiếm khách hàng theo mã trong SQL """
+        if not self.conn:
+            print("❌ Không thể kết nối SQL.")
+            return None
 
-    def display_khachhang(self):
-        """Hiển thị danh sách khách hàng."""
-        if not self.ds:
-            print("Danh sách rỗng!")
-        else:
-            print("\nDanh sách khách hàng: ")
-            print("=" * 70)
-            for kh in self.ds:
-                print(f"Mã KH: {kh['maKH']}, Tên: {kh['tenKH']}, "
-                      f"Địa chỉ: {kh.get('diaChi', 'Không có')}, "
-                      f"Điện thoại: {kh.get('dienThoai', 'Không có')}")
-                print("-" * 70)
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute("SELECT * FROM KhachHang WHERE maKH = ?", (ma_kh,))
+            row = cursor.fetchone()
 
-# Ví dụ sử dụng:
-if __name__ == '__main__':
+            if row:
+                kh = KhachHang(*row)
+                print("\n Thông tin khách hàng tìm thấy:")
+                kh.xuat_thong_tin()
+                return kh
+            else:
+                print("Không tìm thấy khách hàng với mã này!")
+                return None
+        except Exception as e:
+            print(f"Lỗi khi tìm khách hàng: {e}")
+            return None
+
+# Ví dụ chương trình điều khiển cho DSKhachHang
+def main():
     ds_kh = DSKhachHang()
-    # Lấy dữ liệu khách hàng từ SQL Server
-    ds_kh.load_data()
-    ds_kh.display_khachhang()
-    ds_kh.close_connection()
+
+    while True:
+        print("\n===== QUẢN LÝ KHÁCH HÀNG =====")
+        print("1. Lấy danh sách khách hàng từ SQL")
+        print("2. Hiển thị danh sách khách hàng")
+        print("3. Thêm khách hàng mới")
+        print("4. Sửa thông tin khách hàng")
+        print("5. Tìm kiếm khách hàng theo mã")
+        print("0. Thoát")
+        lua_chon = input("Nhập lựa chọn: ")
+
+        if lua_chon == "1":
+            ds_kh.lay_danh_sach_tu_sql()
+        elif lua_chon == "2":
+            ds_kh.hien_thi_danh_sach()
+        elif lua_chon == "3":
+            maKH = input("Nhập mã khách hàng: ")
+            tenKH = input("Nhập tên khách hàng: ")
+            diaChi = input("Nhập địa chỉ: ")
+            dienThoai = input("Nhập số điện thoại: ")
+            kh_moi = KhachHang(maKH, tenKH, diaChi, dienThoai)
+            ds_kh.them_khach_hang(kh_moi)
+        elif lua_chon == "4":
+            maKH = input("Nhập mã khách hàng cần sửa: ")
+            ten_moi = input("Nhập tên mới: ")
+            dia_chi_moi = input("Nhập địa chỉ mới: ")
+            dien_thoai_moi = input("Nhập số điện thoại mới: ")
+            ds_kh.sua_thong_tin_khach_hang(maKH, ten_moi, dia_chi_moi, dien_thoai_moi)
+        elif lua_chon == "5":
+            maKH = input("Nhập mã khách hàng cần tìm: ")
+            ds_kh.tim_khach_hang_theo_ma(maKH)
+        elif lua_chon == "0":
+            print("Thoát chương trình!")
+            break
+        else:
+            print("❌ Lựa chọn không hợp lệ. Vui lòng nhập lại!")

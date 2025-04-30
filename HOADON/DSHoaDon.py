@@ -1,6 +1,7 @@
 import pyodbc
 
 from .HoaDon import HoaDon
+from .utils import capNhatTongTien
 
 
 class DSHoaDon:
@@ -24,19 +25,18 @@ class DSHoaDon:
                 maHD=row[0],
                 maNV=row[1],
                 maKH=row[2],
-                tongTien=row[4],
-                ngayTaoHD=row[3]
+                ngayTaoHD=row[3],
+                tongTien=row[4]
             )
             dsach.append(nvien)
         return dsach
 
-    def them(self, hd):
-        """Thêm hóa đơn vào cơ sở dữ liệu"""
+    def themHD(self, hd):
+        """Thêm hóa đơn vào danh sách"""
         try:
-            self.cursor.execute(
-                "INSERT INTO HOADON (maHD, maNV, maKH, tongTien, ngayTaoHD) VALUES (?, ?, ?, ?, ?)",
-                (hd.maHD, hd.maNV, hd.maKH, hd.tongTien, hd.ngayTaoHD)
-            )
+            cursor = self.conn.cursor()
+            cursor.execute("INSERT INTO HOADON (maHD, maNV, maKH, tongTien) VALUES (?, ?, ?, ?)",
+                         (hd.maHD, hd.maNV, hd.maKH, hd.tongTien))
             self.conn.commit()
             return True
         except Exception as e:
@@ -52,12 +52,12 @@ class DSHoaDon:
         if maHD:
             self.cursor.execute("SELECT * FROM HOADON WHERE maHD = ?", (maHD,))
             row = self.cursor.fetchone()
-            return HoaDon(row[0], row[1], row[2], row[4], row[3]) if row else None  # Trả về đối tượng trực tiếp
+            return HoaDon(row[0], row[1], row[2], row[3], row[4]) if row else None
 
         elif maKH:
             self.cursor.execute("SELECT * FROM HOADON WHERE maKH = ?", (maKH,))
             rows = self.cursor.fetchall()
-            return [HoaDon(row[0], row[1], row[2], row[4], row[3]) for row in rows] if rows else None
+            return [HoaDon(row[0], row[1], row[2], row[3], row[4]) for row in rows] if rows else None
 
         return None
 
@@ -74,8 +74,30 @@ class DSHoaDon:
         self.cursor.execute("SELECT * FROM HOADON")
         rows = self.cursor.fetchall()
         for row in rows:
-            hd = HoaDon(row[0], row[1], row[2], [], row[3], row[4])
+            hd = HoaDon(row[0], row[1], row[2], row[3], row[4])
             hd.xuat()
 
     def dong_ket_noi(self):
         self.conn.close()
+
+    def capNhatTongTien(self, maHD):
+        """Cập nhật tổng tiền cho hóa đơn"""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT thanhTien FROM CHITIETHD WHERE maHD = ?", (maHD,))
+            rows = cursor.fetchall()
+            tongTien = sum(row[0] for row in rows) if rows else 0
+            
+            cursor.execute("UPDATE HOADON SET tongTien = ? WHERE maHD = ?", (tongTien, maHD))
+            self.conn.commit()
+            
+            # Cập nhật tổng tiền trong danh sách
+            self.cursor.execute("SELECT tongTien FROM HOADON WHERE maHD = ?", (maHD,))
+            row = self.cursor.fetchone()
+            if row:
+                self.cursor.execute("UPDATE HOADON SET tongTien = ? WHERE maHD = ?", (tongTien, maHD))
+                self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Lỗi khi cập nhật tổng tiền: {e}")
+            return False
