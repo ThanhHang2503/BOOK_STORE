@@ -15,7 +15,6 @@ class DSSanPham:
                 "DATABASE=DOANPYTHON;"
                 "Trusted_Connection=yes;"
             )
-            print("✅ Kết nối SQL thành công!")
             return conn
         except Exception as e:
             print(f"❌ Lỗi kết nối SQL: {e}")
@@ -37,7 +36,6 @@ class DSSanPham:
                 sp = SanPham(*row)
                 self.products.append(sp)
 
-            print(f"✅ Đã tải {len(self.products)} sản phẩm từ SQL!")
         except Exception as e:
             print(f"❌ Lỗi khi lấy danh sách sản phẩm: {e}")
 

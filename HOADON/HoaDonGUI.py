@@ -63,24 +63,24 @@ class HoaDonGUI:
             if not selected_item:
                 messagebox.showwarning("Cảnh báo", "Vui lòng chọn hóa đơn cần xuất PDF")
                 return
-                
+
             maHD = self.tree.item(selected_item[0])['values'][0]
-            
+
             # Get invoice details
             hoa_don = self.dsHoaDon.timKiem(maHD=maHD)
             if not hoa_don:
                 messagebox.showerror("Lỗi", "Không tìm thấy thông tin hóa đơn")
                 return
-                
+
             # Get invoice items
             ds_ct = DSCTHoaDon()
             chi_tiet = ds_ct.timKiem(maHD=maHD)
-            
+
             # Create PDF
             filename = f"hoadon_{maHD}.pdf"
             doc = SimpleDocTemplate(filename, pagesize=letter)
             elements = []
-            
+
             # Add title
             styles = getSampleStyleSheet()
             title_style = ParagraphStyle(
@@ -99,8 +99,8 @@ class HoaDonGUI:
                 ["Ngày tạo:", hoa_don.ngayTaoHD],
                 ["Tổng tiền:", f"{hoa_don.tongTien:,.0f} VNĐ"]
             ]
-            
-            info_table = Table(info_data, colWidths=[2*inch, 3*inch])
+
+            info_table = Table(info_data, colWidths=[2 * inch, 3 * inch])
             info_table.setStyle(TableStyle([
                 ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
                 ('FONTSIZE', (0, 0), (-1, -1), 10),
@@ -108,11 +108,11 @@ class HoaDonGUI:
             ]))
             elements.append(info_table)
             elements.append(Spacer(1, 20))
-            
+
             # Add invoice items
             elements.append(Paragraph("CHI TIẾT HÓA ĐƠN", title_style))
             elements.append(Spacer(1, 10))
-            
+
             items_data = [["Mã SP", "Số lượng", "Đơn giá", "Thành tiền"]]
             for item in chi_tiet:
                 items_data.append([
@@ -121,8 +121,8 @@ class HoaDonGUI:
                     f"{item.donGia:,.0f} VNĐ",
                     f"{item.thanhTien:,.0f} VNĐ"
                 ])
-            
-            items_table = Table(items_data, colWidths=[1.5*inch, 1*inch, 1.5*inch, 1.5*inch])
+
+            items_table = Table(items_data, colWidths=[1.5 * inch, 1 * inch, 1.5 * inch, 1.5 * inch])
             items_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -137,11 +137,11 @@ class HoaDonGUI:
                 ('GRID', (0, 0), (-1, -1), 1, colors.black)
             ]))
             elements.append(items_table)
-            
+
             # Build PDF
             doc.build(elements)
             messagebox.showinfo("Thành công", f"Đã xuất hóa đơn ra file {filename}")
-            
+
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể xuất PDF: {str(e)}")
 
@@ -153,16 +153,16 @@ class HoaDonGUI:
             if not hoa_don:
                 messagebox.showerror("Lỗi", "Không tìm thấy thông tin hóa đơn")
                 return
-                
+
             # Get invoice items
             ds_ct = DSCTHoaDon()
             chi_tiet = ds_ct.timKiem(maHD=maHD)
-            
+
             # Create PDF
             filename = f"hoadon_{maHD}.pdf"
             doc = SimpleDocTemplate(filename, pagesize=letter)
             elements = []
-            
+
             # Add title
             styles = getSampleStyleSheet()
             title_style = ParagraphStyle(
@@ -183,7 +183,7 @@ class HoaDonGUI:
                 ["Tổng tiền:", f"{hoa_don.tongTien:,.0f} VNĐ" if hoa_don.tongTien else "0 VNĐ"]
             ]
 
-            info_table = Table(info_data, colWidths=[2*inch, 3*inch])
+            info_table = Table(info_data, colWidths=[2 * inch, 3 * inch])
             info_table.setStyle(TableStyle([
                 ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
                 ('FONTSIZE', (0, 0), (-1, -1), 10),
@@ -191,11 +191,11 @@ class HoaDonGUI:
             ]))
             elements.append(info_table)
             # elements.append(Spacer(1, 20))
-            
+
             # Add invoice items
             elements.append(Paragraph("CHI TIẾT HÓA ĐƠN", title_style))
             elements.append(Spacer(1, 10))
-            
+
             items_data = [["Mã SP", "Số lượng", "Đơn giá", "Thành tiền"]]
             for item in chi_tiet:
                 items_data.append([
@@ -204,8 +204,8 @@ class HoaDonGUI:
                     f"{item.donGia:,.0f} VNĐ",
                     f"{item.thanhTien:,.0f} VNĐ"
                 ])
-            
-            items_table = Table(items_data, colWidths=[1.5*inch, 1*inch, 1.5*inch, 1.5*inch])
+
+            items_table = Table(items_data, colWidths=[1.5 * inch, 1 * inch, 1.5 * inch, 1.5 * inch])
             items_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -220,11 +220,11 @@ class HoaDonGUI:
                 ('GRID', (0, 0), (-1, -1), 1, colors.black)
             ]))
             elements.append(items_table)
-            
+
             # Build PDF
             doc.build(elements)
             messagebox.showinfo("Thành công", f"Đã xuất hóa đơn ra file {filename}")
-            
+
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể xuất PDF: {str(e)}")
 
@@ -241,43 +241,47 @@ class HoaDonGUI:
             for hd in dsHoaDon:
                 # Cập nhật tổng tiền cho mỗi hóa đơn
                 self.dsHoaDon.capNhatTongTien(hd.maHD)
-                
+
                 # Định dạng tổng tiền thành số nguyên
                 tong_tien = float(hd.tongTien) if hd.tongTien else 0
                 self.tree.insert("", "end", values=(
-                    hd.maHD, 
-                    hd.maNV, 
-                    hd.maKH, 
-                    f"{tong_tien:,.0f}", 
-                    hd.ngayTaoHD, 
+                    hd.maHD,
+                    hd.maNV,
+                    hd.maKH,
+                    f"{tong_tien:,.0f}",
+                    hd.ngayTaoHD,
                     "👁"
                 ))
 
             # Đảm bảo frame hiển thị đúng
             self.frame_danh_sach.grid(row=3, column=0, sticky="nsew", padx=10, pady=10)
-            self.frame_danh_sach.tkraise()  # Đưa frame danh sách lên trên cùng
+
+            # Cấu hình lại layout để đảm bảo form và nút vẫn hiển thị
+            self.frame_nhap.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+            self.frame_button.grid(row=1, column=0, sticky="ew", padx=10, pady=5)
+            self.frame_danh_sach.grid(row=2, column=0, sticky="nsew", padx=10, pady=10)
+
+            # Cấu hình trọng số cho các dòng
+            self.frame.grid_rowconfigure(0, weight=0)  # Form nhập
+            self.frame.grid_rowconfigure(1, weight=0)  # Nút chức năng
+            self.frame.grid_rowconfigure(2, weight=1)  # Danh sách hóa đơn
 
         except Exception as e:
             self.label_thong_bao.config(text=f"Lỗi khi hiển thị danh sách: {str(e)}", fg="red")
-
 
     def hienThi(self, action):
         # Ẩn mọi widget trong frame chính
         for widget in self.frame.winfo_children():
             widget.grid_forget()
 
-        # Hiển thị khung chính
         self.frame.grid(row=0, column=0, sticky="nsew")
 
-        # Mặc định hiển thị nút làm mới và lưu
-        self.btn_lam_moi.pack(side=tk.LEFT, padx=5)
-        self.btn_luu.pack(side=tk.LEFT, padx=5)
-        self.btn_luu.config(state="normal")
-
         if action=="Hiển thị hóa đơn":
-            # Chỉ hiện danh sách hóa đơn
+            # Chỉ hiện danh sách hóa đơn, giống như phần nhân viên
             self.frame_danh_sach.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
             self.hienThiDS()
+            self.frame_nhap.grid_forget()
+            self.frame_button.grid_forget()
 
         elif action=="Tìm kiếm hóa đơn":
             # Ẩn form nhập hiện tại
@@ -294,8 +298,6 @@ class HoaDonGUI:
             self.btn_lam_moi.pack_forget()
 
         else:
-            # Các chức năng tạo, sửa hóa đơn
-
             # Ẩn khung tìm kiếm nếu đang tồn tại
             if hasattr(self, "search_frame"):
                 self.search_frame.grid_forget()
@@ -347,25 +349,25 @@ class HoaDonGUI:
                     font=("Arial", 10, "bold"))
                 self.btn_xac_nhan.pack(side=tk.LEFT, padx=5, pady=5)
 
-                self.frame_suaHD.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky="w")
+                # Đặt lại vị trí các frame
+                self.frame_nhap.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+                self.frame_suaHD.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+                self.frame_danh_sach.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
 
                 # Separator
                 self.separator = tk.Frame(self.frame, height=2, bg="gray")
                 self.separator.grid(row=3, column=0, columnspan=2, sticky="ew", padx=10, pady=5)
 
-                # Danh sách hóa đơn
-                self.frame_danh_sach.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
-                self.hienThiDS()  # Load danh sách hóa đơn
-
                 # Cấu hình lại layout
                 self.frame.grid_rowconfigure(0, weight=0)
-                self.frame.grid_rowconfigure(2, weight=0)
-                self.frame.grid_rowconfigure(3, weight=0)
-                self.frame.grid_rowconfigure(4, weight=1)
+                self.frame.grid_rowconfigure(1, weight=0)
+                self.frame.grid_rowconfigure(2, weight=1)
                 self.frame.grid_columnconfigure(0, weight=1)
 
                 # Vô hiệu hóa nút lưu (vì đã có xác nhận sửa riêng)
                 self.btn_luu.config(state="disabled")
+
+                self.hienThiDS()  # Hiển thị lại danh sách hóa đơn
 
             else:
                 # Trạng thái mặc định
@@ -505,9 +507,9 @@ class HoaDonGUI:
 
     def toggleSearchOption(self, option):
         """Xử lý khi chọn hoặc bỏ chọn radio button"""
-        if option == "id_hd":
+        if option=="id_hd":
             # Nếu đã chọn radio ID trước đó, bỏ chọn nó
-            if self.selected_radio == "id_hd":
+            if self.selected_radio=="id_hd":
                 self.radio_id_hd_var.set(0)
                 self.selected_radio = None
                 self.search_type.set("")
@@ -520,9 +522,9 @@ class HoaDonGUI:
             self.selected_radio = "id_hd"
             self.search_type.set("id_hd")
 
-        elif option == "id_kh":
+        elif option=="id_kh":
             # Nếu đã chọn radio Name trước đó, bỏ chọn nó
-            if self.selected_radio == "id_kh":
+            if self.selected_radio=="id_kh":
                 self.radio_id_kh_var.set(0)
                 self.selected_radio = None
                 self.search_type.set("")
@@ -569,7 +571,7 @@ class HoaDonGUI:
 
         # Thực hiện tìm kiếm
         try:
-            if self.search_type.get() == "id_hd":
+            if self.search_type.get()=="id_hd":
                 # Tìm kiếm chính xác theo mã
                 hd = self.dsHoaDon.timKiem(search_text)
                 dsHoaDon = [hd] if hd else []
@@ -577,7 +579,6 @@ class HoaDonGUI:
                 # Tìm kiếm theo mã khách hàng
                 dsHoaDon = self.dsHoaDon.timKiem(maKH=search_text)
                 if dsHoaDon is None:
-                    
                     dsHoaDon = []
 
             # Kiểm tra kết quả
@@ -601,7 +602,7 @@ class HoaDonGUI:
         # Tạo Treeview để hiển thị kết quả
         columns = ("maHD", "maNV", "maKH", "tongTien", "ngayTaoHD")
         tree = ttk.Treeview(self.result_frame, columns=columns, show="headings")
-        
+
         # Đặt tiêu đề cột
         tree.heading("maHD", text="Mã hóa đơn")
         tree.heading("maNV", text="Mã nhân viên")
@@ -633,7 +634,7 @@ class HoaDonGUI:
 
     def diChuyen(self, event):
         current_entry = event.widget  # Lấy ô nhập liệu hiện tại
-        if current_entry.get().strip() == "":  # Nếu ô đang trống
+        if current_entry.get().strip()=="":  # Nếu ô đang trống
             return "break"  # Không làm gì cả
 
         next_widget = current_entry.tk_focusNext()  # Tìm ô tiếp theo
@@ -677,7 +678,7 @@ class HoaDonGUI:
         ttk.Label(self.frame_nhap, text="Ngày tạo:").grid(row=4, column=0, padx=5, pady=5, sticky="w")
         self.entry_ngayTao = ttk.Entry(self.frame_nhap, state="readonly")
         self.entry_ngayTao.grid(row=4, column=1, columnspan=3, padx=5, pady=5, sticky="ew")
-        self.entry_ngayTao.insert(0, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        self.entry_ngayTao.insert(0, datetime.now().strftime("%Y-%m-%d"))
 
         # Frame chứa các nút chức năng
         self.frame_button = tk.Frame(self.frame)
@@ -782,7 +783,7 @@ class HoaDonGUI:
 
             self.entry_ngayTao.config(state="normal")
             self.entry_ngayTao.delete(0, tk.END)
-            self.entry_ngayTao.insert(0, values[3])
+            self.entry_ngayTao.insert(0, values[4])  # Sửa lại index để lấy ngày tạo
             self.entry_ngayTao.config(state="readonly")
 
     def luuHoaDon(self):
@@ -798,6 +799,13 @@ class HoaDonGUI:
                 self.label_thong_bao.config(text="Vui lòng nhập đầy đủ thông tin!", fg="red")
                 return
 
+            # Kiểm tra xem mã nhân viên có tồn tại không
+            cursor = self.dsHoaDon.conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM NHANVIEN WHERE maNV = ?", (maNV,))
+            if cursor.fetchone()[0]==0:
+                self.label_thong_bao.config(text=f"Lỗi! Mã nhân viên {maNV} không tồn tại.", fg="red")
+                return
+
             # Tạo hóa đơn mới
             hd = HoaDon(
                 maHD=maHD,
@@ -807,7 +815,7 @@ class HoaDonGUI:
                 ngayTaoHD=ngayTao
             )
 
-            if self.dsHoaDon.them(hd):
+            if self.dsHoaDon.themHD(hd):
                 self.hienThiDS()
                 self.lamMoiForm()
                 self.label_thong_bao.config(text="Thêm hóa đơn thành công!", fg="green")
@@ -838,7 +846,7 @@ class HoaDonGUI:
                 return
 
             # Cập nhật hóa đơn
-            if self.dsHoaDon.sua(maHD, maNV, maKH, ngayTao):
+            if self.dsHoaDon.sua(maHD, maNV=maNV, maKH=maKH, ngayTaoHD=ngayTao):                
                 self.hienThiDS()
                 self.lamMoiForm()
                 self.label_thong_bao.config(text="Sửa thông tin hóa đơn thành công!", fg="green")
@@ -883,7 +891,7 @@ class HoaDonGUI:
         if hasattr(self, "entry_ngayTao") and self.entry_ngayTao.winfo_exists():
             self.entry_ngayTao.config(state="normal")
             self.entry_ngayTao.delete(0, tk.END)
-            self.entry_ngayTao.insert(0, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            self.entry_ngayTao.insert(0, datetime.now().strftime("%Y-%m-%d"))
             self.entry_ngayTao.config(state="readonly")
         if hasattr(self, "label_thong_bao") and self.label_thong_bao.winfo_exists():
             self.label_thong_bao.config(text="")
@@ -898,7 +906,7 @@ class HoaDonGUI:
         self.chi_tiet_window = tk.Toplevel(self.parent)
         self.chi_tiet_window.title(f"Chi tiết hóa đơn {maHD}")
         self.chi_tiet_window.geometry("800x600")
-        
+
         # Center the window
         window_width = 800
         window_height = 600
@@ -971,7 +979,7 @@ class HoaDonGUI:
         # Tải dữ liệu mới
         dsCTHD = DSCTHoaDon()
         chi_tiet = dsCTHD.timKiem(maHD=maHD)
-        
+
         # Tính tổng tiền
         tong_tien = 0
         for ct in chi_tiet:
@@ -987,7 +995,7 @@ class HoaDonGUI:
         # Cập nhật tổng tiền trong hóa đơn
         dsHD = DSHoaDon()
         dsHD.capNhatTongTien(maHD)
-        
+
         # Cập nhật lại danh sách hóa đơn để hiển thị tổng tiền mới
         self.hienThiDS()
 
@@ -997,7 +1005,7 @@ class HoaDonGUI:
         them_window = tk.Toplevel(self.parent)
         them_window.title("Thêm chi tiết hóa đơn")
         them_window.geometry("400x300")
-        
+
         # Center the window
         window_width = 400
         window_height = 300
@@ -1034,11 +1042,11 @@ class HoaDonGUI:
             try:
                 maSP = entry_maSP.get().strip()
                 soLuongSP = int(entry_soLuong.get().strip())
-                donGia = float(entry_donGia.get().strip())
+                donGia = float(entry_donGia.get().replace(',', '').strip())
 
                 # Tạo chi tiết hóa đơn mới
                 ct = ChiTietHD(maHD=maHD, maSP=maSP, soLuongSP=soLuongSP, donGia=donGia)
-                
+
                 # Lưu vào database
                 dsCTHD = DSCTHoaDon()
                 if dsCTHD.them(ct):
@@ -1069,7 +1077,7 @@ class HoaDonGUI:
         sua_window = tk.Toplevel(self.parent)
         sua_window.title("Sửa chi tiết hóa đơn")
         sua_window.geometry("400x300")
-        
+
         # Center the window
         window_width = 400
         window_height = 300
@@ -1109,7 +1117,7 @@ class HoaDonGUI:
         def luu():
             try:
                 soLuongSP = int(entry_soLuong.get().strip())
-                donGia = float(entry_donGia.get().strip())
+                donGia = float(entry_donGia.get().replace(',', '').strip())
 
                 # Cập nhật chi tiết hóa đơn
                 dsCTHD = DSCTHoaDon()
@@ -1153,7 +1161,7 @@ class HoaDonGUI:
                 messagebox.showerror("Lỗi", f"Lỗi khi xóa chi tiết hóa đơn: {str(e)}")
 
 
-if __name__ == "__main__":
+if __name__=="__main__":
     root = tk.Tk()
     root.title("Quản lý hóa đơn")
     root.geometry("800x600")

@@ -1,674 +1,1128 @@
+import os
 import tkinter as tk
 from datetime import datetime
-from tkinter import messagebox, ttk
+from tkinter import PhotoImage, messagebox, ttk
 
-from .CTPhieuNhapBUSS import CTPhieuNhapBUSS
-from .PhieuNhapBUSS import PhieuNhapBUSS
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
+                                TableStyle)
+
+base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Ghép đường dẫn đến fonts
+font_path = os.path.join(base_path, 'font', 'DejaVuSans.ttf')
+
+# Đăng ký font
+pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
+
+from .ChiTietPN import ChiTietPN
+from .DSCTPhieuNhap import DSCTPhieuNhap
+from .DSPhieuNhap import DSPhieuNhap
+from .PhieuNhap import PhieuNhap
 
 
 class PhieuNhapGUI:
-
     def __init__(self, parent):
+        self.master = None
         self.parent = parent
         self.frame = ttk.Frame(self.parent)
         self.frame.grid(row=0, column=0, sticky="nsew")
-        self.frame.grid_remove()
 
-        # Configure grid weights for centering
-        self.parent.grid_rowconfigure(0, weight=1)
-        self.parent.grid_columnconfigure(0, weight=1)
-        self.frame.grid_rowconfigure(0, weight=1)
-        self.frame.grid_columnconfigure(0, weight=1)
+        # Khởi tạo các frame con cho từng chức năng
+        self.them_frame = ttk.Frame(self.frame)
+        self.sua_frame = ttk.Frame(self.frame)
+        self.timKiem_frame = ttk.Frame(self.frame)
+        self.hienThiDS_frame = ttk.Frame(self.frame)
+        self.trangThai_frame = ttk.Frame(self.frame)
 
-        self.phieu_nhap_buss = PhieuNhapBUSS()
-        self.phieu_nhap_buss.lay_du_lieu_tu_sql()
-        self.ctphieu_nhap_buss = CTPhieuNhapBUSS()
-        self.ctphieu_nhap_buss.lay_du_lieu_tu_sql()
+        self.dsPhieuNhap = DSPhieuNhap()  # KẾT NỐI DATABASE
+        self.taoGiaoDien()
 
-        # Main container frame for centering
-        self.main_container = ttk.Frame(self.frame)
-        self.main_container.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        # Mặc định hiển thị danh sách phiếu nhập
+        self.hienThi("Hiển thị phiếu nhập")
 
-        # Title frame
-        self.frame_title = ttk.Frame(self.main_container)
-        self.frame_title.grid(row=0, column=0, pady=(0, 20), sticky="ew")
-        
-        # Title label with better styling
-        # self.title_label = ttk.Label(
-        #     self.frame_title,
-        #     text="QUẢN LÝ PHIẾU NHẬP",
-        #     font=("Arial", 16, "bold")
-        # )
-        # self.title_label.grid(row=0, column=0, sticky="ew")
-        # self.frame_title.grid_columnconfigure(0, weight=1)
+        # cờ trạng thái thao tác
+        self.thanhCong = False
 
-        # Content frame
-        self.frame_thong_tin = ttk.Frame(self.main_container)
-        self.frame_thong_tin.grid(row=1, column=0, sticky="nsew")
+        # Biến lưu trạng thái tìm kiếm - không chọn mặc định
+        self.search_type = tk.StringVar(value="")
 
-        self.hien_thi_them()
+        # Biến lưu trạng thái radio button đã chọn
+        self.selected_radio = None
 
-    def xoa_thong_tin_frame(self):
-        for widget in self.frame_thong_tin.winfo_children():
-            widget.destroy()
-
-    def hien_thi_them(self):
-        self.xoa_thong_tin_frame()
-
-        # Configure grid weights for centering
-        self.frame_thong_tin.grid_columnconfigure(1, weight=1)
-
-        # Create a style for consistent widget appearance
-        style = ttk.Style()
-        style.configure("Custom.TLabel", font=("Arial", 10))
-        style.configure("Custom.TEntry", font=("Arial", 10))
-        style.configure("Custom.TButton", font=("Arial", 10))
-
-        # Labels and entries with consistent styling
-        labels = [
-            ("Mã Phiếu Nhập", "entry_maPN"),
-            ("Ngày Tạo", "entry_ngayTao"),
-            ("Mã Nhân Viên", "entry_maNV")
-        ]
-
-        for i, (label_text, entry_name) in enumerate(labels):
-            label = ttk.Label(self.frame_thong_tin, text=label_text, style="Custom.TLabel")
-            label.grid(row=i, column=0, padx=10, pady=10, sticky="w")
-            
-            entry = ttk.Entry(self.frame_thong_tin, width=30, style="Custom.TEntry")
-            entry.grid(row=i, column=1, padx=10, pady=10, sticky="ew")
-            setattr(self, entry_name, entry)
-
-        # Set ngayTao to current datetime
-        self.entry_ngayTao.insert(0, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        self.entry_ngayTao.config(state="disabled")
-
-        # Button with consistent styling
-        self.btn_them_phieu_nhap = ttk.Button(
-            self.frame_thong_tin, 
-            text="Thêm Phiếu Nhập", 
-            command=self.them_phieu_nhap,
-            style="Custom.TButton"
-        )
-        self.btn_them_phieu_nhap.grid(row=len(labels), column=0, columnspan=2, pady=20)
-
-
-    def them_phieu_nhap(self):
-        maPN = self.entry_maPN.get()
-        ngayTao = self.entry_ngayTao.get()
-        maNV = self.entry_maNV.get()
-        tongTien = 0  # Khởi tạo tổng tiền là 0
-
-        if not maPN or not ngayTao or not maNV:
-            messagebox.showerror("Lỗi", "Vui lòng nhập đầy đủ thông tin!")
-            return
-
-        self.phieu_nhap_buss.them(maPN, ngayTao, maNV, tongTien)
-        messagebox.showinfo("Thông báo", "Thêm phiếu nhập thành công!")
-        self.hien_thi_danh_sach()
-
-
-    def hien_thi_sua(self):
-        self.xoa_thong_tin_frame()
-        
-        # Configure grid weights for centering
-        self.frame_thong_tin.grid_columnconfigure(1, weight=1)
-        
-        # Create a style for consistent widget appearance
-        style = ttk.Style()
-        style.configure("Custom.TLabel", font=("Arial", 10))
-        style.configure("Custom.TEntry", font=("Arial", 10))
-        style.configure("Custom.TButton", font=("Arial", 10))
-        
-        # Title
-        title_label = ttk.Label(
-            self.frame_thong_tin, 
-            text="Sửa Phiếu Nhập", 
-            font=("Arial", 14, "bold"),
-            style="Custom.TLabel"
-        )
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20), sticky="ew")
-        
-        # Search frame
-        search_frame = ttk.Frame(self.frame_thong_tin)
-        search_frame.grid(row=1, column=0, columnspan=3, pady=10, sticky="ew")
-        search_frame.grid_columnconfigure(1, weight=1)
-        
-        ttk.Label(search_frame, text="Nhập Mã Phiếu Nhập:", style="Custom.TLabel").grid(row=0, column=0, padx=5, sticky="w")
-        self.entry_maPN = ttk.Entry(search_frame, width=30, style="Custom.TEntry")
-        self.entry_maPN.grid(row=0, column=1, padx=5, sticky="ew")
-        btn_tim = ttk.Button(
-            search_frame, 
-            text="Tìm kiếm", 
-            command=self.sua_phieu_nhap,
-            style="Custom.TButton"
-        )
-        btn_tim.grid(row=0, column=2, padx=5)
-
-    def sua_phieu_nhap(self):
-        ma_pn = self.entry_maPN.get().strip()
-        if not ma_pn:
-            messagebox.showwarning("Cảnh báo", "Vui lòng nhập mã phiếu nhập!")
-            return
-
-        phieu_nhap = self.phieu_nhap_buss.tim_kiem(ma_pn)
-        if not phieu_nhap:
-            messagebox.showinfo("Thông báo", "Không tìm thấy phiếu nhập!")
-            return
-
-        self.xoa_thong_tin_frame()
-        
-        # Configure grid weights for centering
-        self.frame_thong_tin.grid_columnconfigure(1, weight=1)
-        
-        # Create a style for consistent widget appearance
-        style = ttk.Style()
-        style.configure("Custom.TLabel", font=("Arial", 10))
-        style.configure("Custom.TEntry", font=("Arial", 10))
-        style.configure("Custom.TButton", font=("Arial", 10))
-        
-        # Title
-        title_label = ttk.Label(
-            self.frame_thong_tin, 
-            text="Sửa Thông Tin Phiếu Nhập", 
-            font=("Arial", 14, "bold"),
-            style="Custom.TLabel"
-        )
-        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20), sticky="ew")
-
-        maPN, ngayTao, maNV, tongTien = phieu_nhap
-
-        # Form fields
-        fields = [
-            ("Mã Phiếu Nhập:", maPN, True),
-            ("Ngày Tạo:", ngayTao, True),
-            ("Mã Nhân Viên:", maNV, False)
-        ]
-
-        for i, (label_text, value, disabled) in enumerate(fields, start=1):
-            ttk.Label(self.frame_thong_tin, text=label_text, style="Custom.TLabel").grid(
-                row=i, column=0, padx=10, pady=5, sticky="w"
-            )
-            entry = ttk.Entry(self.frame_thong_tin, width=30, style="Custom.TEntry")
-            entry.insert(0, value)
-            if disabled:
-                entry.config(state="disabled")
-            entry.grid(row=i, column=1, padx=10, pady=5, sticky="ew")
-            setattr(self, f"entry_{label_text.split(':')[0].lower().replace(' ', '_')}", entry)
-
-        # Buttons frame
-        btn_frame = ttk.Frame(self.frame_thong_tin)
-        btn_frame.grid(row=len(fields) + 1, column=0, columnspan=2, pady=20)
-        btn_frame.grid_columnconfigure(0, weight=1)
-        
-        btn_xac_nhan = ttk.Button(
-            btn_frame, 
-            text="Xác nhận sửa", 
-            command=self.xac_nhan_sua,
-            style="Custom.TButton"
-        )
-        btn_xac_nhan.grid(row=0, column=0, padx=5)
-
-        # Chi tiết phiếu nhập
-        columns = ("maPN", "maSP", "soLuong", "donGia", "thanhTien")
-        self.tree_ct = ttk.Treeview(
-            self.frame_thong_tin, 
-            columns=columns, 
-            show="headings", 
-            height=5,
-            style="Custom.Treeview"
-        )
-        
-        # Configure treeview columns
-        for col in columns:
-            self.tree_ct.heading(col, text=col)
-            self.tree_ct.column(col, width=100, anchor="center")
-            
-        self.tree_ct.grid(row=len(fields) + 2, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
-
-        # Load data
-        dsct = self.ctphieu_nhap_buss.tim_kiem(maPN)
-        for ct in dsct:
-            self.tree_ct.insert("", "end", values=(ct.maPN, ct.maSP, ct.soLuong, ct.donGia, ct.thanhTien))
-
-        # Action buttons frame
-        action_btn_frame = ttk.Frame(self.frame_thong_tin)
-        action_btn_frame.grid(row=len(fields) + 3, column=0, columnspan=2, pady=10)
-        action_btn_frame.grid_columnconfigure(0, weight=1)
-
-        buttons = [
-            ("Sửa Chi Tiết Phiếu Nhập", self.sua_chi_tiet_phiieu_nhap),
-            ("Thêm Chi Tiết Phiếu Nhập", self.them_chi_tiet_phiieu_nhap),
-            ("Xóa Chi Tiết Phiếu Nhập", self.xoa_chi_tiet_phiieu_nhap)
-        ]
-
-        for i, (text, command) in enumerate(buttons):
-            btn = ttk.Button(
-                action_btn_frame, 
-                text=text, 
-                command=command,
-                style="Custom.TButton"
-            )
-            btn.grid(row=0, column=i, padx=5)
-
-
-    def sua_chi_tiet_phiieu_nhap(self):
-        selected = self.tree_ct.selection()
-        if not selected:
-            messagebox.showwarning("Cảnh báo", "Vui lòng chọn chi tiết phiếu nhập cần sửa!")
-            return
-        values = self.tree_ct.item(selected[0], 'values')
-        maPN, maSP, soLuong, donGia, thanhTien = values
-
-        win = tk.Toplevel()
-        win.title("Sửa chi tiết phiếu nhập")
-        
-        # Configure grid weights for centering
-        win.grid_rowconfigure(0, weight=1)
-        win.grid_columnconfigure(0, weight=1)
-        
-        # Main container
-        main_frame = ttk.Frame(win)
-        main_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
-        main_frame.grid_columnconfigure(1, weight=1)
-        
-        # Create a style for consistent widget appearance
-        style = ttk.Style()
-        style.configure("Custom.TLabel", font=("Arial", 10))
-        style.configure("Custom.TEntry", font=("Arial", 10))
-        style.configure("Custom.TButton", font=("Arial", 10))
-
-        # Title
-        title_label = ttk.Label(
-            main_frame, 
-            text="Sửa Chi Tiết Phiếu Nhập", 
-            font=("Arial", 14, "bold"),
-            style="Custom.TLabel"
-        )
-        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20), sticky="ew")
-
-        # Display read-only fields
-        ttk.Label(main_frame, text=f"Mã phiếu nhập:", style="Custom.TLabel").grid(row=1, column=0, padx=10, pady=5, sticky="w")
-        ttk.Label(main_frame, text=maPN, style="Custom.TLabel").grid(row=1, column=1, padx=10, pady=5, sticky="w")
-        
-        ttk.Label(main_frame, text=f"Mã sản phẩm:", style="Custom.TLabel").grid(row=2, column=0, padx=10, pady=5, sticky="w")
-        ttk.Label(main_frame, text=maSP, style="Custom.TLabel").grid(row=2, column=1, padx=10, pady=5, sticky="w")
-
-        # Editable fields
-        ttk.Label(main_frame, text="Số lượng:", style="Custom.TLabel").grid(row=3, column=0, padx=10, pady=5, sticky="w")
-        entry_soLuong = ttk.Entry(main_frame, width=30, style="Custom.TEntry")
-        entry_soLuong.insert(0, soLuong)
-        entry_soLuong.grid(row=3, column=1, padx=10, pady=5, sticky="ew")
-
-        ttk.Label(main_frame, text="Đơn giá:", style="Custom.TLabel").grid(row=4, column=0, padx=10, pady=5, sticky="w")
-        entry_donGia = ttk.Entry(main_frame, width=30, style="Custom.TEntry")
-        entry_donGia.insert(0, donGia)
-        entry_donGia.grid(row=4, column=1, padx=10, pady=5, sticky="ew")
-
-        # Button frame
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.grid(row=5, column=0, columnspan=2, pady=20)
-        btn_frame.grid_columnconfigure(0, weight=1)
-
-        btn_capnhat = ttk.Button(
-            btn_frame,
-            text="Cập nhật",
-            command=lambda: self.cap_nhat(maPN, maSP, entry_soLuong, entry_donGia, win),
-            style="Custom.TButton"
-        )
-        btn_capnhat.grid(row=0, column=0, padx=5)
-
-
-    def cap_nhat(self, maPN, maSP, entry_soLuong, entry_donGia, win):
+    def xuatPDF(self):
         try:
-            soLuong_moi = int(entry_soLuong.get())
-            donGia_moi = float(entry_donGia.get())
-            thanhTien_moi = soLuong_moi * donGia_moi
+            # Get selected invoice
+            selected_item = self.tree.selection()
+            if not selected_item:
+                messagebox.showwarning("Cảnh báo", "Vui lòng chọn phiếu nhập cần xuất PDF")
+                return
 
-            # Cập nhật chi tiết phiếu nhập
-            self.ctphieu_nhap_buss.sua(maPN, maSP, soLuong_moi, donGia_moi, thanhTien_moi)
-            
-            # Cập nhật tổng tiền
-            self.phieu_nhap_buss.cap_nhat_tong_tien(maPN)
-            
-            # Cập nhật lại danh sách
-            self.hien_thi_danh_sach()
+            maPN = self.tree.item(selected_item[0])['values'][0]
 
-            win.destroy()
-            messagebox.showinfo("Thành công", "Cập nhật chi tiết phiếu nhập thành công.")
-        except ValueError:
-            messagebox.showerror("Lỗi", "Vui lòng nhập số hợp lệ cho số lượng và đơn giá.")
+            # Get invoice details
+            hoa_don = self.dsPhieuNhap.timKiem(maPN=maPN)
+            if not hoa_don:
+                messagebox.showerror("Lỗi", "Không tìm thấy thông tin phiếu nhập")
+                return
 
+            # Get invoice items
+            ds_ct = DSCTPhieuNhap()
+            chi_tiet = ds_ct.timKiem(maPN=maPN)
 
-    def them_chi_tiet_phiieu_nhap(self):
-        maPN = self.entry_maPN.get().strip()
-        if not maPN:
-            messagebox.showwarning("Cảnh báo", "Vui lòng nhập mã phiếu nhập!")
-            return
+            # Create PDF
+            filename = f"phieunhap_{maPN}.pdf"
+            doc = SimpleDocTemplate(filename, pagesize=letter)
+            elements = []
 
-        win = tk.Toplevel()
-        win.title("Thêm Chi Tiết Phiếu Nhập")
-        
-        # Configure grid weights for centering
-        win.grid_rowconfigure(0, weight=1)
-        win.grid_columnconfigure(0, weight=1)
-        
-        # Main container
-        main_frame = ttk.Frame(win)
-        main_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
-        main_frame.grid_columnconfigure(1, weight=1)
-        
-        # Create a style for consistent widget appearance
-        style = ttk.Style()
-        style.configure("Custom.TLabel", font=("Arial", 10))
-        style.configure("Custom.TEntry", font=("Arial", 10))
-        style.configure("Custom.TButton", font=("Arial", 10))
-
-        # Title
-        title_label = ttk.Label(
-            main_frame, 
-            text="Thêm Chi Tiết Phiếu Nhập", 
-            font=("Arial", 14, "bold"),
-            style="Custom.TLabel"
-        )
-        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20), sticky="ew")
-
-        # Form fields
-        fields = [
-            ("Mã sản phẩm:", "entry_maSP"),
-            ("Số lượng:", "entry_soLuong"),
-            ("Đơn giá:", "entry_donGia")
-        ]
-
-        for i, (label_text, entry_name) in enumerate(fields, start=1):
-            ttk.Label(main_frame, text=label_text, style="Custom.TLabel").grid(
-                row=i, column=0, padx=10, pady=5, sticky="w"
+            # Add title
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontName='DejaVuSans',
+                fontSize=16,
+                spaceAfter=30
             )
-            entry = ttk.Entry(main_frame, width=30, style="Custom.TEntry")
-            entry.grid(row=i, column=1, padx=10, pady=5, sticky="ew")
-            setattr(self, entry_name, entry)
+            elements.append(Paragraph(f"PHIẾU NHẬP #{maPN}", title_style))
 
-        # Button frame
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.grid(row=len(fields) + 1, column=0, columnspan=2, pady=20)
-        btn_frame.grid_columnconfigure(0, weight=1)
+            # Add invoice info
+            info_data = [
+                ["Mã nhân viên:", hoa_don.maNV],
+                ["Ngày tạo:", hoa_don.ngayTaoPN],
+                ["Tổng tiền:", f"{hoa_don.tongTien:,.0f} VNĐ"]
+            ]
 
-        btn_them = ttk.Button(
-            btn_frame,
-            text="Thêm",
-            command=lambda: self.cap_nhat_them_chi_tiet(
-                maPN, 
-                self.entry_maSP.get(), 
-                self.entry_soLuong.get(), 
-                self.entry_donGia.get(), 
-                win
-            ),
-            style="Custom.TButton"
-        )
-        btn_them.grid(row=0, column=0, padx=5)
+            info_table = Table(info_data, colWidths=[2 * inch, 3 * inch])
+            info_table.setStyle(TableStyle([
+                ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ]))
+            elements.append(info_table)
+            elements.append(Spacer(1, 20))
 
+            # Add invoice items
+            elements.append(Paragraph("CHI TIẾT PHIẾU NHẬP", title_style))
+            elements.append(Spacer(1, 10))
 
-    def cap_nhat_them_chi_tiet(self, maPN, maSP, soLuong, donGia, win):
+            items_data = [["Mã SP", "Số lượng", "Đơn giá", "Thành tiền"]]
+            for item in chi_tiet:
+                items_data.append([
+                    item.maSP,
+                    str(item.soLuongSP),
+                    f"{item.donGia:,.0f} VNĐ",
+                    f"{item.thanhTien:,.0f} VNĐ"
+                ])
+
+            items_table = Table(items_data, colWidths=[1.5 * inch, 1 * inch, 1.5 * inch, 1.5 * inch])
+            items_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'DejaVuSans'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+                ('FONTNAME', (0, 1), (-1, -1), 'DejaVuSans'),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            elements.append(items_table)
+
+            # Build PDF
+            doc.build(elements)
+            messagebox.showinfo("Thành công", f"Đã xuất phiếu nhập ra file {filename}")
+
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể xuất PDF: {str(e)}")
+
+    def xuatPDFChiTiet(self, maPN):
+        """Xuất PDF cho chi tiết phiếu nhập"""
         try:
-            soLuong_moi = int(soLuong)
-            donGia_moi = float(donGia)
-            thanhTien_moi = soLuong_moi * donGia_moi
-            
+            # Lấy thông tin phiếu nhập
+            hoa_don = self.dsPhieuNhap.timKiem(maPN=maPN)
+            if not hoa_don:
+                messagebox.showerror("Lỗi", "Không tìm thấy thông tin phiếu nhập")
+                return
+
+            # Lấy chi tiết phiếu nhập
+            ds_ct = DSCTPhieuNhap()
+            chi_tiet = ds_ct.timKiem(maPN=maPN)
+
+            # Tạo file PDF
+            filename = f"phieunhap_{maPN}.pdf"
+            doc = SimpleDocTemplate(filename, pagesize=letter)
+            elements = []
+
+            # Tiêu đề
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontName='DejaVuSans',
+                fontSize=16,
+                spaceAfter=30
+            )
+            elements.append(Paragraph(f"PHIẾU NHẬP #{maPN}", title_style))
+
+            # Thông tin phiếu nhập
+            info_data = [
+                ["Mã nhân viên:", hoa_don.maNV],
+                ["Ngày tạo:", str(hoa_don.ngayTaoPN)],
+                ["Tổng tiền:", f"{hoa_don.tongTien:,.0f} VNĐ" if hoa_don.tongTien else "0 VNĐ"]
+            ]
+            info_table = Table(info_data, colWidths=[2 * inch, 3 * inch])
+            info_table.setStyle(TableStyle([
+                ('FONTNAME', (0, 0), (-1, -1), 'DejaVuSans'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ]))
+            elements.append(info_table)
+
             # Thêm chi tiết phiếu nhập
-            self.ctphieu_nhap_buss.them(maPN, maSP, soLuong_moi, donGia_moi, thanhTien_moi)
-            
-            # Cập nhật tổng tiền
-            self.phieu_nhap_buss.cap_nhat_tong_tien(maPN)
-            
-            # Cập nhật lại danh sách
-            self.hien_thi_danh_sach()
-            
-            win.destroy()
-            messagebox.showinfo("Thành công", "Thêm chi tiết phiếu nhập thành công.")
-        except ValueError:
-            messagebox.showerror("Lỗi", "Vui lòng nhập số hợp lệ cho số lượng và đơn giá.")
+            elements.append(Paragraph("CHI TIẾT PHIẾU NHẬP", title_style))
+            elements.append(Spacer(1, 10))
 
+            items_data = [["Mã SP", "Số lượng", "Đơn giá", "Thành tiền"]]
+            for item in chi_tiet:
+                items_data.append([
+                    item.maSP,
+                    str(item.soLuongSP),
+                    f"{item.donGia:,.0f} VNĐ",
+                    f"{item.thanhTien:,.0f} VNĐ"
+                ])
 
-    def xoa_chi_tiet_phiieu_nhap(self):
-        selected = self.tree_ct.selection()
-        if not selected:
-            messagebox.showwarning("Cảnh báo", "Vui lòng chọn chi tiết phiếu nhập cần xóa!")
-            return
-        values = self.tree_ct.item(selected[0], 'values')
-        maPN, maSP, _, _, _ = values
-        
-        # Xóa chi tiết phiếu nhập
-        self.ctphieu_nhap_buss.xoa(maPN, maSP)
-        
-        # Cập nhật tổng tiền
-        self.phieu_nhap_buss.cap_nhat_tong_tien(maPN)
-        
-        # Cập nhật lại danh sách
-        self.hien_thi_danh_sach()
-        
-        messagebox.showinfo("Thành công", "Xóa chi tiết phiếu nhập thành công.")
+            items_table = Table(items_data, colWidths=[1.5 * inch, 1 * inch, 1.5 * inch, 1.5 * inch])
+            items_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'DejaVuSans'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+                ('FONTNAME', (0, 1), (-1, -1), 'DejaVuSans'),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            elements.append(items_table)
 
+            # Xuất file PDF
+            doc.build(elements)
+            messagebox.showinfo("Thành công", f"Đã xuất phiếu nhập ra file {filename}")
 
-    def xac_nhan_sua(self):
-        maPN = self.entry_maPN.get().strip()
-        maNV = self.entry_maNV.get().strip()
-        ngayTao = self.entry_ngayTao.get().strip()
-        tongTien = self.entry_tongTien.get().strip()
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể xuất PDF: {str(e)}")
 
-        if not maPN or not maNV or not ngayTao or not tongTien:
-            messagebox.showwarning("Cảnh báo", "Vui lòng nhập đầy đủ thông tin.")
-            return
-
+    def hienThiDS(self):
+        """Hiển thị danh sách phiếu nhập trong TreeView"""
         try:
-            datetime.strptime(ngayTao.strip(), "%Y-%m-%d")  # Kiểm tra định dạng ngày
-        except ValueError:
-            messagebox.showerror("Lỗi", "Ngày tạo phải có định dạng YYYY-MM-DD.")
-            return
+            dsPhieuNhap = self.dsPhieuNhap.danhSachPN()  # Lấy danh sách phiếu nhập
 
-        try:
-            tongTien = float(tongTien.replace(".", "").replace(",", "."))
-        except ValueError:
-            messagebox.showerror("Lỗi", "Tổng tiền phải là một số hợp lệ.")
-            return
+            # Xóa dữ liệu cũ trong TreeView
+            for item in self.tree.get_children():
+                self.tree.delete(item)
 
-        ket_qua_sua_phieu_nhap = self.phieu_nhap_buss.sua_phieu_nhap(maPN, ngayTao, maNV, tongTien)
+            # Thêm dữ liệu mới vào TreeView
+            for pn in dsPhieuNhap:
+                self.dsPhieuNhap.capNhatTongTien(pn.maPN)
+                tong_tien = float(pn.tongTien) if pn.tongTien else 0
+                self.tree.insert("", "end", values=(
+                    pn.maPN,
+                    pn.maNV,
+                    f"{tong_tien:,.0f}",
+                    pn.ngayTaoPN,
+                    "👁"
+                ))
+        except Exception as e:
+            self.label_thong_bao.config(text=f"Lỗi khi hiển thị danh sách: {str(e)}", fg="red")
 
-        if ket_qua_sua_phieu_nhap:
-            for item in self.tree_ct.get_children():
-                values = self.tree_ct.item(item, 'values')
-                maPN_ct, maSP, soLuong, donGia, thanhTien = values
-                soLuong_moi = int(soLuong)
-                donGia_moi = float(donGia)
-                thanhTien_moi = soLuong_moi * donGia_moi
-                ket_qua_ct = self.ctphieu_nhap_buss.sua(maPN_ct, maSP, soLuong_moi, donGia_moi, thanhTien_moi)
+    def hienThi(self, action):
+        # Ẩn mọi widget trong frame chính
+        for widget in self.frame.winfo_children():
+            widget.grid_forget()
 
-                if not ket_qua_ct:
-                    messagebox.showerror("Lỗi", f"Cập nhật chi tiết phiếu nhập cho sản phẩm {maSP} thất bại.")
-                    return
+        self.frame.grid(row=0, column=0, sticky="nsew")
 
-            messagebox.showinfo("Thành công", "Cập nhật phiếu nhập và chi tiết phiếu nhập vào cơ sở dữ liệu thành công.")
-            self.hien_thi_sua()
+        if action=="Hiển thị phiếu nhập":
+            self.frame_danh_sach.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+            self.hienThiDS()
+            self.frame_nhap.grid_forget()
+            self.frame_button.grid_forget()
+
+        elif action=="Tìm kiếm phiếu nhập":
+            # Ẩn form nhập hiện tại
+            for widget in self.frame_nhap.winfo_children():
+                widget.grid_forget()
+
+            # Hiển thị lại frame nhập, tạo giao diện tìm kiếm
+            self.frame_nhap.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+            self.frame_button.grid(row=1, column=0, pady=10, sticky="nsew")
+            self.taoGiaoDienTimKiem()
+
+            # Ẩn các nút không liên quan
+            self.btn_luu.pack_forget()
+            self.btn_lam_moi.pack_forget()
+
         else:
-            messagebox.showerror("Lỗi", "Không thể cập nhật phiếu nhập.")
+            # Ẩn khung tìm kiếm nếu đang tồn tại
+            if hasattr(self, "search_frame"):
+                self.search_frame.grid_forget()
 
+            # Tạo lại form đầy đủ
+            self.taoGiaoDien()
+            self.lamMoiForm()
 
-    def hien_thi_tim(self):
-        self.xoa_thong_tin_frame()
-        
-        # Configure grid weights for centering
-        self.frame_thong_tin.grid_columnconfigure(1, weight=1)
-        
-        # Create a style for consistent widget appearance
+            self.frame_nhap.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+            self.frame_button.grid(row=1, column=0, pady=10, sticky="nsew")
+
+            if action=="Tạo phiếu nhập":
+                self.label_thong_bao.config(text="Nhập thông tin phiếu nhập mới", fg="blue")
+                self.entry_maPN.config(state="normal")
+                self.btn_luu.config(state="normal")
+                self.btn_export_pdf.pack_forget()
+
+            elif action=="Sửa phiếu nhập":
+                self.label_thong_bao.config(text="Chọn phiếu nhập từ danh sách để sửa", fg="blue")
+                self.entry_maPN.config(state="readonly")
+
+                # Hiện form sửa nếu có
+                if hasattr(self, "frame_form"):
+                    self.frame_form.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+                    for widget in self.frame_form.winfo_children():
+                        if isinstance(widget, tk.Label) or isinstance(widget, tk.Entry):
+                            widget.grid_configure(sticky="ew")
+
+                # Ẩn tất cả widget sau dòng thứ 1 (form button là dòng 1)
+                for widget in self.frame.winfo_children():
+                    grid_info = widget.grid_info()
+                    if int(grid_info.get('row', -1)) > 1:
+                        widget.grid_forget()
+
+                # Ẩn các nút mặc định
+                self.btn_lam_moi.pack_forget()
+                self.btn_luu.pack_forget()
+                self.btn_export_pdf.pack_forget()
+
+                # Frame chứa nút xác nhận/hủy sửa
+                self.frame_suaPN = tk.Frame(self.frame)
+                self.btn_huy_sua = tk.Button(self.frame_suaPN, text="Hủy",
+                    command=self.lamMoiForm, bg="red", fg="white",
+                    font=("Arial", 10, "bold"))
+                self.btn_huy_sua.pack(side=tk.LEFT, padx=5, pady=5)
+
+                self.btn_xac_nhan = tk.Button(self.frame_suaPN, text="Xác nhận sửa",
+                    command=self.suaPhieuNhap, bg="green", fg="white",
+                    font=("Arial", 10, "bold"))
+                self.btn_xac_nhan.pack(side=tk.LEFT, padx=5, pady=5)
+
+                # Đặt lại vị trí các frame
+                self.frame_nhap.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+                self.frame_suaPN.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+                self.frame_danh_sach.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
+
+                # Separator
+                self.separator = tk.Frame(self.frame, height=2, bg="gray")
+                self.separator.grid(row=3, column=0, columnspan=2, sticky="ew", padx=10, pady=5)
+
+                # Cấu hình lại layout
+                self.frame.grid_rowconfigure(0, weight=0)
+                self.frame.grid_rowconfigure(1, weight=0)
+                self.frame.grid_rowconfigure(2, weight=1)
+                self.frame.grid_columnconfigure(0, weight=1)
+
+                # Vô hiệu hóa nút lưu (vì đã có xác nhận sửa riêng)
+                self.btn_luu.config(state="disabled")
+
+                self.hienThiDS()  # Hiển thị lại danh sách phiếu nhập
+
+            else:
+                # Trạng thái mặc định
+                self.label_thong_bao.config(text="", fg="black")
+
+    def taoGiaoDienTimKiem(self):
+        """Tạo giao diện tìm kiếm theo mẫu mới"""
+        # Xóa các widget cũ trong frame nhập
+        for widget in self.frame_nhap.winfo_children():
+            widget.grid_forget()
+
+        # Reset biến tìm kiếm
+        self.search_type.set("")
+        self.selected_radio = None
+
+        # Tạo frame chính với padding nhưng không có viền
+        main_frame = tk.Frame(self.frame_nhap, bg="#f5f5f5")
+        main_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+        self.frame_nhap.columnconfigure(0, weight=1)
+        self.frame_nhap.rowconfigure(0, weight=1)
+
+        # Tạo frame chứa giao diện tìm kiếm không có viền
+        self.search_frame = tk.Frame(main_frame, bg="white")
+        self.search_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(0, weight=1)
+        main_frame.rowconfigure(1, weight=0)
+        main_frame.rowconfigure(2, weight=0)
+
+        # Tiêu đề
+        title_label = tk.Label(
+            self.search_frame,
+            text="Tìm kiếm phiếu nhập",
+            font=("Arial", 20, "bold"),
+            bg="white",
+            fg="#87CEEB"
+        )
+        title_label.grid(row=0, column=0, pady=(20, 15), sticky="ew")
+        self.search_frame.columnconfigure(0, weight=1)
+
+        # Frame chứa radio buttons
+        radio_frame = tk.Frame(self.search_frame, bg="white")
+        radio_frame.grid(row=1, column=0, pady=10, sticky="ew")
+
+        # Tạo custom radio buttons
+        self.radio_id_pn_var = tk.IntVar(value=0)
+        self.radio_id_nv_var = tk.IntVar(value=0)
+
         style = ttk.Style()
-        style.configure("Custom.TLabel", font=("Arial", 10))
-        style.configure("Custom.TEntry", font=("Arial", 10))
-        style.configure("Custom.TButton", font=("Arial", 10))
-        
-        # Title
-        title_label = ttk.Label(
-            self.frame_thong_tin, 
-            text="Tìm Kiếm Phiếu Nhập", 
-            font=("Arial", 14, "bold"),
-            style="Custom.TLabel"
-        )
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20), sticky="ew")
-        
-        # Search frame
-        search_frame = ttk.Frame(self.frame_thong_tin)
-        search_frame.grid(row=1, column=0, columnspan=3, pady=10, sticky="ew")
-        search_frame.grid_columnconfigure(1, weight=1)
-        
-        ttk.Label(search_frame, text="Nhập Mã Phiếu Nhập:", style="Custom.TLabel").grid(row=0, column=0, padx=5, sticky="w")
-        self.entry_maPN = ttk.Entry(search_frame, width=30, style="Custom.TEntry")
-        self.entry_maPN.grid(row=0, column=1, padx=5, sticky="ew")
-        btn_tim = ttk.Button(
-            search_frame, 
-            text="Tìm kiếm", 
-            command=self.tim_kiem,
-            style="Custom.TButton"
-        )
-        btn_tim.grid(row=0, column=2, padx=5)
+        style.configure("Custom.TRadiobutton",
+            background="white",
+            foreground="black",
+            font=("Arial", 15),
+            indicatorcolor="black",
+            indicatordiameter=12,
+            indicatormargin=4,
+            relief="flat")
 
-    def tim_kiem(self):
-        ma_pn = self.entry_maPN.get().strip()
-        if not ma_pn:
-            messagebox.showwarning("Cảnh báo", "Vui lòng nhập mã phiếu nhập!")
+        # Frame cho radio ID
+        id_radio_frame = tk.Frame(radio_frame, bg="white")
+        id_radio_frame.grid(row=0, column=0, padx=20)
+
+        self.radio_id = ttk.Radiobutton(
+            id_radio_frame,
+            text="Tìm theo mã phiếu nhập",
+            variable=self.search_type,
+            value="id_pn",
+            style="Custom.TRadiobutton",
+            command=lambda: self.toggleSearchOption("id_pn")
+        )
+        self.radio_id.grid(row=0, column=0)
+
+        # Frame cho radio Name
+        name_radio_frame = tk.Frame(radio_frame, bg="white")
+        name_radio_frame.grid(row=0, column=1, padx=20)
+
+        self.radio_name = ttk.Radiobutton(
+            name_radio_frame,
+            text="Tìm theo mã nhân viên",
+            variable=self.search_type,
+            value="id_kh",
+            style="Custom.TRadiobutton",
+            command=lambda: self.toggleSearchOption("id_kh")
+        )
+        self.radio_name.grid(row=0, column=0)
+
+        # Căn giữa các radio buttons trong radio_frame
+        radio_frame.grid_columnconfigure(0, weight=1)
+        radio_frame.grid_columnconfigure(1, weight=1)
+
+        # Frame chứa input và nút tìm kiếm (ẩn ban đầu)
+        self.input_frame = tk.Frame(self.search_frame, bg="white")
+
+        # Input field - không có placeholder
+        self.search_entry = tk.Entry(
+            self.input_frame,
+            font=("Arial", 12),
+            bd=1,
+            relief=tk.SOLID,
+            width=40
+        )
+        self.search_entry.grid(row=0, column=0, padx=(0, 10), ipady=5, sticky="ew")
+
+        # Nút tìm kiếm
+        self.search_button = tk.Button(
+            self.input_frame,
+            text="Tìm kiếm",
+            bg="#212121",
+            fg="white",
+            font=("Arial", 11, "bold"),
+            bd=0,
+            padx=15,
+            pady=5,
+            command=self.thucHienTimKiem
+        )
+        self.search_button.grid(row=0, column=1, padx=5)
+        self.input_frame.columnconfigure(0, weight=1)
+
+        # Frame hiển thị kết quả tìm kiếm
+        self.result_frame = tk.Frame(main_frame, bg="white")
+
+        # Label thông báo kết quả
+        self.result_label = tk.Label(
+            main_frame,
+            text="",
+            font=("Arial", 12),
+            fg="green",
+            bg="#f5f5f5"
+        )
+        self.result_label.grid(row=1, column=0, pady=10, sticky="ew")
+
+        self.btn_export_pdf.pack_forget()
+
+        # Ẩn danh sách phiếu nhập
+        if hasattr(self, "frame_danh_sach"):
+            self.frame_danh_sach.grid_forget()
+
+    def toggleSearchOption(self, option):
+        """Xử lý khi chọn hoặc bỏ chọn radio button"""
+        if option=="id_pn":
+            # Nếu đã chọn radio ID trước đó, bỏ chọn nó
+            if self.selected_radio=="id_pn":
+                self.radio_id_pn_var.set(0)
+                self.selected_radio = None
+                self.search_type.set("")
+                self.input_frame.grid_forget()
+                return
+
+            # Nếu chưa chọn hoặc đã chọn radio khác, chọn radio ID
+            self.radio_id_pn_var.set(1)
+            self.radio_id_nv_var.set(0)
+            self.selected_radio = "id_pn"
+            self.search_type.set("id_pn")
+
+        elif option=="id_nv":
+            # Nếu đã chọn radio Name trước đó, bỏ chọn nó
+            if self.selected_radio=="id_nv":
+                self.radio_id_nv_var.set(0)
+                self.selected_radio = None
+                self.search_type.set("")
+                self.input_frame.grid_forget()
+                return
+
+            # Nếu chưa chọn hoặc đã chọn radio khác, chọn radio Name
+            self.radio_id_nv_var.set(1)
+            self.radio_id_pn_var.set(0)
+            self.selected_radio = "id_nv"
+            self.search_type.set("id_nv")
+
+        # Hiển thị input field nếu đã chọn một option
+        if self.selected_radio:
+            # Xóa nội dung cũ trong ô nhập liệu
+            self.search_entry.delete(0, tk.END)
+            # Hiển thị ô nhập liệu
+            self.input_frame.grid(row=2, column=0, pady=15, padx=20, sticky="ew")
+            # Đặt focus vào ô nhập liệu
+            self.search_entry.focus_set()
+        else:
+            self.input_frame.grid_forget()
+
+        # Xóa kết quả tìm kiếm cũ
+        if hasattr(self, "result_frame") and self.result_frame.winfo_exists():
+            self.result_frame.grid_forget()
+
+        # Xóa thông báo
+        if hasattr(self, "result_label") and self.result_label.winfo_exists():
+            self.result_label.config(text="")
+
+    def thucHienTimKiem(self):
+        """Thực hiện tìm kiếm theo loại đã chọn"""
+        search_text = self.search_entry.get()
+
+        # Kiểm tra nếu ô nhập liệu trống
+        if not search_text.strip():
+            self.result_label.config(text="Vui lòng nhập thông tin tìm kiếm!", fg="red")
             return
 
-        self.xoa_thong_tin_frame()
+        # Xóa kết quả tìm kiếm cũ
+        if hasattr(self, "result_frame") and self.result_frame.winfo_exists():
+            self.result_frame.grid_forget()
 
-        # Lấy thông tin phiếu nhập từ danh sách
-        phieu_nhap = self.phieu_nhap_buss.tim_kiem(ma_pn)
+        # Thực hiện tìm kiếm
+        try:
+            if self.search_type.get()=="id_pn":
+                # Tìm kiếm chính xác theo mã
+                pn = self.dsPhieuNhap.timKiem(search_text)
+                dsPhieuNhap = [pn] if pn else []
+            else:
+                # Tìm kiếm theo mã nhân viên
+                dsPhieuNhap = self.dsPhieuNhap.timKiem(maNV=search_text)
+                if dsPhieuNhap is None:
+                    dsPhieuNhap = []
 
-        if not phieu_nhap:
-            messagebox.showinfo("Thông báo", "Không tìm thấy phiếu nhập!")
-            return
+            # Kiểm tra kết quả
+            if not dsPhieuNhap:
+                self.result_label.config(text="Không tìm thấy phiếu nhập", fg="red")
+                return
 
-        ttk.Label(self.frame_thong_tin, text="Thông tin phiếu nhập", font=("Arial", 12, "bold")).pack(anchor="w", pady=(0, 10))
+            # Hiển thị danh sách phiếu nhập tìm được
+            self.hienThiDSKetQua(dsPhieuNhap)
+            self.result_label.config(text=f"Đã tìm thấy {len(dsPhieuNhap)} phiếu nhập", fg="green")
 
-        # Treeview hiển thị phiếu nhập
-        columns = ("maPN", "ngayNhap", "nhaCungCap",  "tongTien")
-        tree_phieu_nhap = ttk.Treeview(self.frame_thong_tin, columns=columns, show="headings")
-        for col, text in zip(columns, ["Mã Phiếu Nhập", "Ngày Nhập","Mã Nhà Cung Cấp",  "Tổng Tiền"]):
-            tree_phieu_nhap.heading(col, text=text)
-            tree_phieu_nhap.column(col, width=150)
+        except Exception as e:
+            self.result_label.config(text="Không tìm thấy phiếu nhập", fg="red")
 
-        tree_phieu_nhap.pack(fill="x", padx=10)
+    def hienThiDSKetQua(self, dsPhieuNhap):
+        """Hiển thị danh sách kết quả tìm kiếm"""
+        # Tạo frame kết quả
+        self.result_frame = tk.Frame(self.frame_nhap, bg="white")
+        self.result_frame.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
 
-        # Giả sử phieu_nhap = (maPN, nhaCungCap, ngayNhap, tongTien)
-        maPN, nhaCungCap, ngayNhap, tongTien = phieu_nhap
+        # Tạo Treeview để hiển thị kết quả
+        columns = ("maPN", "maNV", "tongTien", "ngayTaoPN")
+        tree = ttk.Treeview(self.result_frame, columns=columns, show="headings")
 
-        # Định dạng tổng tiền: VD: 120.000
-        tongTien_str = "{:,.0f}".format(float(tongTien)).replace(",", ".")
+        # Đặt tiêu đề cột
+        tree.heading("maPN", text="Mã phiếu nhập")
+        tree.heading("maNV", text="Mã nhân viên")
+        tree.heading("tongTien", text="Tổng tiền")
+        tree.heading("ngayTaoPN", text="Ngày tạo")
 
-        # Chèn dữ liệu vào treeview
-        tree_phieu_nhap.insert("", "end", values=(maPN, nhaCungCap, ngayNhap, tongTien_str))
+        # Thêm dữ liệu vào Treeview
+        for pn in dsPhieuNhap:
+            tree.insert("", "end", values=(
+                pn.maPN,
+                pn.maNV,
+                pn.tongTien,
+                pn.ngayTaoPN
+            ))
 
-        # Treeview hiển thị chi tiết phiếu nhập
-        ttk.Label(self.frame_thong_tin, text="Chi tiết phiếu nhập", font=("Arial", 12, "bold")).pack(anchor="w", pady=(20, 10))
+        # Thêm thanh cuộn
+        scrollbar = ttk.Scrollbar(self.result_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
 
-        columns_ct = ("maPN", "maSP", "soLuongSP", "donGia", "thanhTien")
-        tree_ctpn = ttk.Treeview(self.frame_thong_tin, columns=columns_ct, show="headings")
-        for col in columns_ct:
-            tree_ctpn.heading(col, text=col)
-            tree_ctpn.column(col, width=120)
-        tree_ctpn.pack(fill="x", padx=10)
+        # Đặt layout
+        tree.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
 
-        for ct in self.ctphieu_nhap_buss.dsctpn:
-            if str(ct.maPN) == ma_pn:
-                donGia_str = "{:,.0f}".format(float(ct.donGia)).replace(",", ".")
-                thanhTien_str = "{:,.0f}".format(float(ct.thanhTien)).replace(",", ".")
-                tree_ctpn.insert("", "end", values=(ct.maPN, ct.maSP, ct.soLuong, donGia_str, thanhTien_str))
+        # Cấu hình frame
+        self.result_frame.columnconfigure(0, weight=1)
+        self.result_frame.rowconfigure(0, weight=1)
 
+    def diChuyen(self, event):
+        current_entry = event.widget  # Lấy ô nhập liệu hiện tại
+        if current_entry.get().strip()=="":  # Nếu ô đang trống
+            return "break"  # Không làm gì cả
 
-    def hien_thi_in_danh_sach(self):
-        self.xoa_thong_tin_frame()
+        next_widget = current_entry.tk_focusNext()  # Tìm ô tiếp theo
+        if isinstance(next_widget, tk.Entry):  # Nếu ô tiếp theo là Entry thì chuyển
+            next_widget.focus()
+        return "break"  # Ngăn hành động mặc định
 
-        self.frame_trai = tk.Frame(self.frame_thong_tin)
-        self.frame_trai.pack(side="left", fill="both", expand=True, padx=10, pady=10)
-
-        self.frame_phai = tk.Frame(self.frame_thong_tin, bg="#F0F0F0")
-        self.frame_phai.pack(side="left", fill="both", expand=True, padx=10, pady=10)
-        tk.Label(self.frame_trai, text=f"Danh sách phiếu nhập", font=("Arial", 14, "bold"), bg="#F0F0F0").pack(pady=10)
-
-        self.treeview = ttk.Treeview(
-            self.frame_trai,
-            columns=("Mã PN", "Ngày Tạo", "Mã NV", "Tổng Tiền"),
-            show="headings"
-        )
-        self.treeview.pack(fill="both", expand=True)
-
-        self.treeview.heading("Mã PN", text="Mã Phiếu Nhập")
-        self.treeview.heading("Ngày Tạo", text="Ngày Tạo")
-        self.treeview.heading("Mã NV", text="Mã Nhân Viên")
-        self.treeview.heading("Tổng Tiền", text="Tổng Tiền")
-
-        self.treeview.column("Mã PN", width=150)
-        self.treeview.column("Ngày Tạo", width=150)
-        self.treeview.column("Mã NV", width=150)
-        self.treeview.column("Tổng Tiền", width=150)
-
-        self.treeview.bind("<<TreeviewSelect>>", self.hien_thi_chi_tiet_phieu_nhap)
-
-        self.hien_thi_danh_sach()
-
-    def hien_thi_danh_sach(self):
-        for item in self.treeview.get_children():
-            self.treeview.delete(item)
-
-        for phieu in self.phieu_nhap_buss.dsphieunhap:
-            self.treeview.insert("", "end", values=(phieu[0], phieu[1], phieu[2], phieu[3]))
-
-    def hien_thi_chi_tiet_phieu_nhap(self, event):
-        selected = self.treeview.focus()
-        values = self.treeview.item(selected, "values")
-        maPN, ngayTao, maNV, tongTien = values
-        # Xóa các widget cũ trong frame chi tiết
-        for widget in self.frame_phai.winfo_children():
-            widget.destroy()
-
-        tk.Label(self.frame_phai, text=f"Chi tiết phiếu nhập", font=("Arial", 14, "bold"), bg="#F0F0F0").pack(pady=10)
-        tk.Label(self.frame_phai, text=f"Mã Phiếu Nhập: {maPN}", bg="#F0F0F0").pack(anchor="w", padx=20, pady=5)
-        tk.Label(self.frame_phai, text=f"Ngày Tạo: {ngayTao}", bg="#F0F0F0").pack(anchor="w", padx=20, pady=5)
-        tk.Label(self.frame_phai, text=f"Mã Nhân Viên: {maNV}", bg="#F0F0F0").pack(anchor="w", padx=20, pady=5)
-        tk.Label(self.frame_phai, text=f"Tổng Tiền: {tongTien}", bg="#F0F0F0").pack(anchor="w", padx=20, pady=5)
-
-        # Hiển thị danh sách chi tiết phiếu nhập
-        tree_ctpn = ttk.Treeview(self.frame_phai, columns=("Mã SP", "Số Lượng", "Đơn Giá", "Thành Tiền"), show="headings", height=8)
-        tree_ctpn.pack(padx=20, pady=10, fill="x")
-
-        tree_ctpn.heading("Mã SP", text="Mã Sản Phẩm")
-        tree_ctpn.heading("Số Lượng", text="Số Lượng")
-        tree_ctpn.heading("Đơn Giá", text="Đơn Giá")
-        tree_ctpn.heading("Thành Tiền", text="Thành Tiền")
-
-        tree_ctpn.column("Mã SP", width=100)
-        tree_ctpn.column("Số Lượng", width=100)
-        tree_ctpn.column("Đơn Giá", width=100)
-        tree_ctpn.column("Thành Tiền", width=100)
-        for ct in self.ctphieu_nhap_buss.dsctpn:
-            if str(ct.maPN) == str(maPN):
-                tree_ctpn.insert("", "end", values=(ct.maSP, ct.soLuong, ct.donGia, ct.thanhTien))
+    def hienThiFrameSuaPN(self):
+        print("Hiển thị frame_suaPN...")
+        self.frame_suaPN.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky="w")  # di chuyển xuống row 2, thêm columnspan
 
     def anGiaoDien(self):
-        """Ẩn giao diện quản lý hóa đơn"""
+        """Ẩn giao diện quản lý phiếu nhập"""
         self.frame.grid_forget()
 
-    def hienThi(self, action=None):
-        """Hiển thị giao diện tương ứng với action"""
-        self.frame.grid(row=0, column=0, sticky="nsew")
-        if action=="Tạo phiếu nhập":
-            self.hien_thi_them()
-        elif action=="Tìm kiếm phiếu nhập":
-            self.hien_thi_tim()
-        elif action=="Sửa phiếu nhập":
-            self.hien_thi_sua()
-        elif action=="Hiển thị danh sách":
-            self.hien_thi_in_danh_sach()
+    def taoGiaoDien(self):
+        """Tạo giao diện chung cho quản lý phiếu nhập"""
+        self.frame.columnconfigure(0, weight=1)
+        self.frame.rowconfigure(0, weight=1)
+        self.frame.rowconfigure(1, weight=1)
+        self.frame.rowconfigure(2, weight=1)
+        self.frame.rowconfigure(3, weight=1)
+        # Frame nhập thông tin
+        self.frame_nhap = ttk.LabelFrame(self.frame)
+
+        self.label_thong_bao = tk.Label(self.frame_nhap, text="", fg="red")
+        self.label_thong_bao.grid(row=0, column=0, columnspan=4, pady=5)
+
+        ttk.Label(self.frame_nhap, text="Mã phiếu nhập:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.entry_maPN = ttk.Entry(self.frame_nhap)
+        self.entry_maPN.grid(row=1, column=1, columnspan=3, padx=5, pady=5, sticky="ew")
+
+        ttk.Label(self.frame_nhap, text="Mã nhân viên:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.entry_maNV = ttk.Entry(self.frame_nhap)
+        self.entry_maNV.grid(row=2, column=1, columnspan=3, padx=5, pady=5, sticky="ew")
+
+        ttk.Label(self.frame_nhap, text="Ngày tạo:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+        self.entry_ngayTao = ttk.Entry(self.frame_nhap, state="readonly")
+        self.entry_ngayTao.grid(row=3, column=1, columnspan=3, padx=5, pady=5, sticky="ew")
+        self.entry_ngayTao.insert(0, datetime.now().strftime("%Y-%m-%d"))
+
+        # Frame chứa các nút chức năng
+        self.frame_button = tk.Frame(self.frame)
+
+        self.btn_lam_moi = tk.Button(self.frame_button, text="Quay lại", command=self.lamMoiForm, bg="#9E9E9E",
+            fg="white")
+        self.btn_lam_moi.pack(side=tk.LEFT, padx=5)
+        self.btn_luu = tk.Button(self.frame_button, text="OK", command=self.luuPhieuNhap, bg="#4CAF50", fg="white")
+        self.btn_luu.pack(side=tk.LEFT, padx=5)
+
+        # Add export PDF button
+        self.btn_export_pdf = ttk.Button(self.frame_button, text="Xuất PDF", command=self.xuatPDF)
+        self.btn_export_pdf.pack(side=tk.LEFT, padx=5)
+
+        # Tạo frame chứa các nút sửa nếu chưa có
+        self.frame_suaPN = tk.Frame(self.parent)
+
+        # Frame hiển thị danh sách
+        self.frame_danh_sach = ttk.LabelFrame(self.frame, text="Danh sách phiếu nhập")
+
+        # Tạo Treeview để hiển thị danh sách
+        self.tree = ttk.Treeview(
+            self.frame_danh_sach,
+            columns=("maPN", "maNV", "tongTien", "ngayTaoPN", "chiTiet"),
+            displaycolumns=("maPN", "maNV", "tongTien", "ngayTaoPN", "chiTiet"),
+            show="headings",
+            height=15
+        )
+        self.tree.heading("maPN", text="Mã phiếu nhập")
+        self.tree.heading("maNV", text="Mã nhân viên")
+        self.tree.heading("tongTien", text="Tổng tiền")
+        self.tree.heading("ngayTaoPN", text="Ngày tạo")
+        self.tree.heading("chiTiet", text="Chi tiết")
+
+        # Thiết lập độ rộng cột
+        self.tree.column("maPN", width=100, anchor="center")
+        self.tree.column("maNV", width=100, anchor="center")
+        self.tree.column("tongTien", width=150, anchor="center")
+        self.tree.column("ngayTaoPN", width=150, anchor="center")
+        self.tree.column("chiTiet", width=100, anchor="center")
+
+        # Thêm thanh cuộn
+        scrollbar_y = ttk.Scrollbar(self.frame_danh_sach, orient="vertical", command=self.tree.yview)
+        scrollbar_x = ttk.Scrollbar(self.frame_danh_sach, orient="horizontal", command=self.tree.xview)
+        self.tree.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+
+        # Sắp xếp các thành phần
+        scrollbar_y.pack(side="right", fill="y")
+        scrollbar_x.pack(side="bottom", fill="x")
+        self.tree.pack(fill="both", expand=True)
+
+        # Bắt sự kiện khi chọn một phiếu nhập trong danh sách
+        self.tree.bind("<<TreeviewSelect>>", self.chonPN)
+        self.tree.bind("<Button-1>", self.xuLyClickXemPN)
+
+        # Frame hiển thị trạng thái (sẽ được tạo khi cần)
+        self.frame_trang_thai = None
+
+        # Gán sự kiện khi nhấn Enter để di chuyển đến ô tiếp theo
+        entries = [self.entry_maPN, self.entry_maNV, self.entry_ngayTao]
+        for entry in entries:
+            entry.bind("<Return>", self.diChuyen)
+
+    def xuLyClickXemPN(self, event):
+        region = self.tree.identify("region", event.x, event.y)
+        if region=="cell":
+            col = self.tree.identify_column(event.x)
+            row = self.tree.identify_row(event.y)
+            print(f"Click vào cột: {col}, dòng: {row}")
+            if col=="#5":
+                if row:
+                    item = self.tree.item(row)
+                    values = item["values"]
+                    print(f"Giá trị dòng: {values}")
+                    maPN = values[0]
+                    print(f"Mã phiếu nhập được chọn: {maPN}")
+                    self.xemChiTietPN(maPN)
 
 
-# Main Program
-if __name__ == "__main__":
+    def chonPN(self, event):
+        """Xử lý sự kiện khi chọn một phiếu nhập trong danh sách"""
+        selected_items = self.tree.selection()
+        if selected_items:
+            item = selected_items[0]
+            values = self.tree.item(item, "values")
+
+            # Hiển thị thông tin phiếu nhập được chọn lên form
+            if self.entry_maPN and self.entry_maPN.winfo_exists():
+                self.entry_maPN.config(state="normal")
+
+            self.entry_maPN.delete(0, tk.END)
+            self.entry_maPN.insert(0, values[0])
+            self.entry_maPN.config(state="readonly")  # khoa lai
+
+            self.entry_maNV.delete(0, tk.END)
+            self.entry_maNV.insert(0, values[1])
+
+            self.entry_ngayTao.config(state="normal")
+            self.entry_ngayTao.delete(0, tk.END)
+            self.entry_ngayTao.insert(0, values[3])  # Sửa lại index để lấy ngày tạo
+            self.entry_ngayTao.config(state="readonly")
+
+    def luuPhieuNhap(self):
+        """Lưu thông tin phiếu nhập mới"""
+        try:
+            maPN = self.entry_maPN.get().strip()
+            maNV = self.entry_maNV.get().strip()
+            ngayTao = self.entry_ngayTao.get().strip()
+            tongTien = 0  # Khởi tạo tổng tiền là 0
+
+            if not all([maPN, maNV, ngayTao]):
+                self.label_thong_bao.config(text="Vui lòng nhập đầy đủ thông tin!", fg="red")
+                return
+
+            # Kiểm tra xem mã nhân viên có tồn tại không
+            cursor = self.dsPhieuNhap.conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM NHANVIEN WHERE maNV = ?", (maNV,))
+            if cursor.fetchone()[0]==0:
+                self.label_thong_bao.config(text=f"Lỗi! Mã nhân viên {maNV} không tồn tại.", fg="red")
+                return
+
+            # Tạo phiếu nhập mới
+            pn = PhieuNhap(
+                maPN=maPN,
+                maNV=maNV,
+                tongTien=tongTien,
+                ngayTaoPN=ngayTao
+            )
+
+            if self.dsPhieuNhap.themPN(pn):
+                self.hienThiDS()
+                self.lamMoiForm()
+                self.label_thong_bao.config(text="Thêm phiếu nhập thành công!", fg="green")
+            else:
+                self.label_thong_bao.config(text=f'Lỗi! Mã phiếu nhập {maPN} đã tồn tại.', fg="red")
+        except Exception as e:
+            self.label_thong_bao.config(text=f"Lỗi: {str(e)}", fg="red")
+
+    def suaPhieuNhap(self):
+        """Sửa thông tin phiếu nhập"""
+        try:
+            maPN = self.entry_maPN.get().strip()
+            if not maPN:
+                self.label_thong_bao.config(text="Vui lòng chọn phiếu nhập cần sửa!", fg="red")
+                return
+
+            maNV = self.entry_maNV.get().strip()
+            ngayTao = self.entry_ngayTao.get().strip()
+
+            if not all([maNV, ngayTao]):
+                self.label_thong_bao.config(text="Vui lòng nhập đầy đủ thông tin!", fg="red")
+                return
+
+            # Xác nhận trước khi sửa
+            confirm = messagebox.askyesno("Xác nhận sửa", f"Bạn có chắc muốn sửa thông tin phiếu nhập có mã {maPN}?")
+            if not confirm:
+                return
+
+            # Cập nhật phiếu nhập
+            if self.dsPhieuNhap.sua(maPN, maNV=maNV, ngayTaoPN=ngayTao):
+                self.hienThiDS()
+                self.lamMoiForm()
+                self.label_thong_bao.config(text="Sửa thông tin phiếu nhập thành công!", fg="green")
+            else:
+                self.label_thong_bao.config(text=f"Không tìm thấy phiếu nhập có mã {maPN}!", fg="red")
+        except Exception as e:
+            self.label_thong_bao.config(text=f"Lỗi khi sửa phiếu nhập: {str(e)}", fg="red")
+
+    def xoaPhieuNhap(self):
+        """Xóa phiếu nhập"""
+        try:
+            selected_items = self.tree.selection()
+            if not selected_items:
+                self.label_thong_bao.config(text="Vui lòng chọn phiếu nhập cần xóa!", fg="red")
+                return
+
+            item = selected_items[0]
+            maPN = self.tree.item(item, "values")[0]
+
+            # Hiển thị hộp thoại xác nhận
+            confirm = messagebox.askyesno("Xác nhận xóa", f"Bạn có chắc muốn xóa phiếu nhập có mã {maPN}?")
+            if confirm:
+                if self.dsPhieuNhap.xoa(maPN):
+                    self.hienThiDS()
+                    self.lamMoiForm()
+                    self.label_thong_bao.config(text="Xóa phiếu nhập thành công!", fg="green")
+                else:
+                    self.label_thong_bao.config(text=f"Không tìm thấy phiếu nhập có mã {maPN}!", fg="red")
+        except Exception as e:
+            self.label_thong_bao.config(text=f"Lỗi khi xóa phiếu nhập: {str(e)}", fg="red")
+
+    def lamMoiForm(self):
+        """Làm mới form nhập liệu"""
+        # Check if the widgets exist before trying to clear them
+        if hasattr(self, "entry_maPN") and self.entry_maPN.winfo_exists():
+            self.entry_maPN.config(state="normal")
+            self.entry_maPN.delete(0, tk.END)
+        if hasattr(self, "entry_maNV") and self.entry_maNV.winfo_exists():
+            self.entry_maNV.delete(0, tk.END)
+        if hasattr(self, "entry_ngayTao") and self.entry_ngayTao.winfo_exists():
+            self.entry_ngayTao.config(state="normal")
+            self.entry_ngayTao.delete(0, tk.END)
+            self.entry_ngayTao.insert(0, datetime.now().strftime("%Y-%m-%d"))
+            self.entry_ngayTao.config(state="readonly")
+        if hasattr(self, "label_thong_bao") and self.label_thong_bao.winfo_exists():
+            self.label_thong_bao.config(text="")
+
+    def xemChiTietPN(self, maPN):
+        """Xử lý sự kiện khi double click vào cột chi tiết"""
+        # Kiểm tra nếu cửa sổ chi tiết đã tồn tại thì đóng nó
+        if hasattr(self, 'chi_tiet_window') and self.chi_tiet_window.winfo_exists():
+            self.chi_tiet_window.destroy()
+
+        # Tạo cửa sổ mới để hiển thị chi tiết phiếu nhập
+        self.chi_tiet_window = tk.Toplevel(self.parent)
+        self.chi_tiet_window.title(f"Chi tiết phiếu nhập {maPN}")
+        self.chi_tiet_window.geometry("800x600")
+
+        # Center the window
+        window_width = 800
+        window_height = 600
+        screen_width = self.chi_tiet_window.winfo_screenwidth()
+        screen_height = self.chi_tiet_window.winfo_screenheight()
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        self.chi_tiet_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+        # Tạo frame chính và căn giữa
+        main_frame = ttk.Frame(self.chi_tiet_window)
+        main_frame.pack(expand=True, fill="both", padx=20, pady=20)
+
+        # Tạo frame chứa chi tiết phiếu nhập
+        frame_chi_tiet = ttk.LabelFrame(main_frame, text="Danh sách chi tiết phiếu nhập")
+        frame_chi_tiet.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Tạo Treeview hiển thị chi tiết
+        columns = ("maSP", "soLuongSP", "donGia", "thanhTien")
+        tree_chi_tiet = ttk.Treeview(frame_chi_tiet, columns=columns, show="headings")
+        tree_chi_tiet.heading("maSP", text="Mã sản phẩm")
+        tree_chi_tiet.heading("soLuongSP", text="Số lượng")
+        tree_chi_tiet.heading("donGia", text="Đơn giá")
+        tree_chi_tiet.heading("thanhTien", text="Thành tiền")
+
+        # Thiết lập độ rộng cột
+        tree_chi_tiet.column("maSP", width=150, anchor="center")
+        tree_chi_tiet.column("soLuongSP", width=100, anchor="center")
+        tree_chi_tiet.column("donGia", width=150, anchor="center")
+        tree_chi_tiet.column("thanhTien", width=150, anchor="center")
+
+        # Thêm thanh cuộn
+        scrollbar = ttk.Scrollbar(frame_chi_tiet, orient="vertical", command=tree_chi_tiet.yview)
+        tree_chi_tiet.configure(yscrollcommand=scrollbar.set)
+
+        # Sắp xếp các thành phần
+        tree_chi_tiet.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Frame chứa các nút chức năng
+        frame_button = ttk.Frame(main_frame)
+        frame_button.pack(fill="x", padx=10, pady=10)
+
+        # Tạo các nút chức năng
+        btn_them = ttk.Button(frame_button, text="Thêm", command=lambda: self.themChiTiet(maPN, tree_chi_tiet))
+        btn_them.pack(side="left", padx=5)
+
+        btn_sua = ttk.Button(frame_button, text="Sửa", command=lambda: self.suaChiTiet(maPN, tree_chi_tiet))
+        btn_sua.pack(side="left", padx=5)
+
+        btn_xoa = ttk.Button(frame_button, text="Xóa", command=lambda: self.xoaChiTiet(maPN, tree_chi_tiet))
+        btn_xoa.pack(side="left", padx=5)
+
+        # Add PDF export button
+        btn_export_pdf = ttk.Button(frame_button, text="Xuất PDF", command=lambda: self.xuatPDFChiTiet(maPN))
+        btn_export_pdf.pack(side="left", padx=5)
+
+        # Tải dữ liệu chi tiết phiếu nhập
+        self.taiChiTietPN(maPN, tree_chi_tiet)
+
+        # Đặt focus vào cửa sổ mới
+        self.chi_tiet_window.focus_set()
+
+    def taiChiTietPN(self, maPN, tree):
+        """Tải dữ liệu chi tiết phiếu nhập vào Treeview"""
+        # Xóa dữ liệu cũ
+        for item in tree.get_children():
+            tree.delete(item)
+
+        # Tải dữ liệu mới
+        dsCTPN = DSCTPhieuNhap()
+        chi_tiet = dsCTPN.timKiem(maPN=maPN)
+
+        # Tính tổng tiền
+        tong_tien = 0
+        for ct in chi_tiet:
+            # Thêm vào Treeview
+            tree.insert("", "end", values=(
+                ct.maSP,
+                ct.soLuongSP,
+                f"{ct.donGia:,.0f}",
+                f"{ct.thanhTien:,.0f}"
+            ))
+            tong_tien += ct.thanhTien
+
+        # Cập nhật tổng tiền trong phiếu nhập
+        dsPN = DSPhieuNhap()
+        dsPN.capNhatTongTien(maPN)
+
+        # Cập nhật lại danh sách phiếu nhập để hiển thị tổng tiền mới
+        self.hienThiDS()
+
+    def themChiTiet(self, maPN, tree):
+        """Thêm chi tiết phiếu nhập mới"""
+        # Tạo cửa sổ nhập liệu
+        them_window = tk.Toplevel(self.parent)
+        them_window.title("Thêm chi tiết phiếu nhập")
+        them_window.geometry("400x300")
+
+        # Center the window
+        window_width = 400
+        window_height = 300
+        screen_width = them_window.winfo_screenwidth()
+        screen_height = them_window.winfo_screenheight()
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        them_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+        # Tạo frame chính và căn giữa
+        main_frame = ttk.Frame(them_window)
+        main_frame.pack(expand=True, fill="both", padx=20, pady=20)
+
+        # Tạo các trường nhập liệu
+        frame_nhap = ttk.LabelFrame(main_frame, text="Nhập thông tin chi tiết")
+        frame_nhap.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Mã sản phẩm
+        ttk.Label(frame_nhap, text="Mã sản phẩm:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        entry_maSP = ttk.Entry(frame_nhap)
+        entry_maSP.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
+        # Số lượng
+        ttk.Label(frame_nhap, text="Số lượng:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        entry_soLuong = ttk.Entry(frame_nhap)
+        entry_soLuong.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+
+        # Đơn giá
+        ttk.Label(frame_nhap, text="Đơn giá:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        entry_donGia = ttk.Entry(frame_nhap)
+        entry_donGia.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
+
+        def luu():
+            try:
+                maSP = entry_maSP.get().strip()
+                soLuongSP = int(entry_soLuong.get().strip())
+                donGia = float(entry_donGia.get().replace(',', '').strip())
+
+                # Tạo chi tiết phiếu nhập mới
+                ct = ChiTietPN(maPN=maPN, maSP=maSP, soLuongSP=soLuongSP, donGia=donGia)
+
+                # Lưu vào database
+                dsCTPN = DSCTPhieuNhap()
+                if dsCTPN.them(ct):
+                    # Cập nhật lại danh sách
+                    self.taiChiTietPN(maPN, tree)
+                    them_window.destroy()
+                else:
+                    messagebox.showerror("Lỗi", "Không thể thêm chi tiết phiếu nhập!")
+            except Exception as e:
+                messagebox.showerror("Lỗi", f"Lỗi khi thêm chi tiết phiếu nhập: {str(e)}")
+
+        # Nút lưu
+        btn_luu = ttk.Button(main_frame, text="Lưu", command=luu)
+        btn_luu.pack(pady=10)
+
+    def suaChiTiet(self, maPN, tree):
+        """Sửa chi tiết phiếu nhập"""
+        selected_items = tree.selection()
+        if not selected_items:
+            messagebox.showwarning("Cảnh báo", "Vui lòng chọn chi tiết cần sửa!")
+            return
+
+        item = selected_items[0]
+        values = tree.item(item, "values")
+        maSP = values[0]
+
+        # Tạo cửa sổ sửa
+        sua_window = tk.Toplevel(self.parent)
+        sua_window.title("Sửa chi tiết phiếu nhập")
+        sua_window.geometry("400x300")
+
+        # Center the window
+        window_width = 400
+        window_height = 300
+        screen_width = sua_window.winfo_screenwidth()
+        screen_height = sua_window.winfo_screenheight()
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        sua_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+        # Tạo frame chính và căn giữa
+        main_frame = ttk.Frame(sua_window)
+        main_frame.pack(expand=True, fill="both", padx=20, pady=20)
+
+        # Tạo các trường nhập liệu
+        frame_nhap = ttk.LabelFrame(main_frame, text="Sửa thông tin chi tiết")
+        frame_nhap.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Mã sản phẩm (readonly)
+        ttk.Label(frame_nhap, text="Mã sản phẩm:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        entry_maSP = ttk.Entry(frame_nhap)
+        entry_maSP.insert(0, values[0])
+        entry_maSP.config(state="readonly")
+        entry_maSP.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
+        # Số lượng
+        ttk.Label(frame_nhap, text="Số lượng:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        entry_soLuong = ttk.Entry(frame_nhap)
+        entry_soLuong.insert(0, values[1])
+        entry_soLuong.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+
+        # Đơn giá
+        ttk.Label(frame_nhap, text="Đơn giá:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
+        entry_donGia = ttk.Entry(frame_nhap)
+        entry_donGia.insert(0, values[2])
+        entry_donGia.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
+
+        def luu():
+            try:
+                soLuongSP = int(entry_soLuong.get().strip())
+                donGia = float(entry_donGia.get().replace(',', '').strip())
+
+                # Cập nhật chi tiết phiếu nhập
+                dsCTPN = DSCTPhieuNhap()
+                if dsCTPN.xoa(maPN, maSP):
+                    ct = ChiTietPN(maPN=maPN, maSP=maSP, soLuongSP=soLuongSP, donGia=donGia)
+                    if dsCTPN.them(ct):
+                        # Cập nhật lại danh sách
+                        self.taiChiTietPN(maPN, tree)
+                        sua_window.destroy()
+                    else:
+                        messagebox.showerror("Lỗi", "Không thể cập nhật chi tiết phiếu nhập!")
+                else:
+                    messagebox.showerror("Lỗi", "Không thể cập nhật chi tiết phiếu nhập!")
+            except Exception as e:
+                messagebox.showerror("Lỗi", f"Lỗi khi cập nhật chi tiết phiếu nhập: {str(e)}")
+
+        # Nút lưu
+        btn_luu = ttk.Button(main_frame, text="Lưu", command=luu)
+        btn_luu.pack(pady=10)
+
+    def xoaChiTiet(self, maPN, tree):
+        """Xóa chi tiết phiếu nhập"""
+        selected_items = tree.selection()
+        if not selected_items:
+            messagebox.showwarning("Cảnh báo", "Vui lòng chọn chi tiết cần xóa!")
+            return
+
+        item = selected_items[0]
+        values = tree.item(item, "values")
+        maSP = values[0]
+
+        if messagebox.askyesno("Xác nhận", "Bạn có chắc chắn muốn xóa chi tiết này?"):
+            try:
+                dsCTPN = DSCTPhieuNhap()
+                if dsCTPN.xoa(maPN, maSP):
+                    # Cập nhật lại danh sách
+                    self.taiChiTietPN(maPN, tree)
+                else:
+                    messagebox.showerror("Lỗi", "Không thể xóa chi tiết phiếu nhập!")
+            except Exception as e:
+                messagebox.showerror("Lỗi", f"Lỗi khi xóa chi tiết phiếu nhập: {str(e)}")
+
+
+if __name__=="__main__":
     root = tk.Tk()
+    root.title("Quản lý phiếu nhập")
+    root.geometry("800x600")
     app = PhieuNhapGUI(root)
     root.mainloop()

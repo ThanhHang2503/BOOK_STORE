@@ -212,11 +212,11 @@ class ThongKeGUI:
         for hd in self.thongke_buss.dshoadon:
             maHD, ngayTaoHD, maNV, tongTien = hd
             
-            # Định dạng ngày tháng
-            if isinstance(ngayTaoHD, datetime):
-                ngay_tao_str = ngayTaoHD.strftime("%d/%m/%Y")
+            # Định dạng ngày tháng giống hóa đơn
+            if isinstance(ngayTaoHD, (datetime, date)):
+                ngay_tao_str = ngayTaoHD.strftime("%Y-%m-%d")
             else:
-                ngay_tao_str = ngayTaoHD.strftime("%d/%m/%Y") if hasattr(ngayTaoHD, 'strftime') else str(ngayTaoHD)
+                ngay_tao_str = str(ngayTaoHD)
             
             # Định dạng tiền tệ
             tong_tien_str = f"{tongTien:,.0f}"
@@ -283,11 +283,11 @@ class ThongKeGUI:
         for hd in ket_qua:
             maHD, ngayTaoHD, maNV, tongTien = hd
             
-            # Định dạng ngày tháng
-            if isinstance(ngayTaoHD, datetime):
-                ngay_tao_str = ngayTaoHD.strftime("%d/%m/%Y")
+            # Định dạng ngày tháng giống hóa đơn
+            if isinstance(ngayTaoHD, (datetime, date)):
+                ngay_tao_str = ngayTaoHD.strftime("%Y-%m-%d")
             else:
-                ngay_tao_str = ngayTaoHD.strftime("%d/%m/%Y") if hasattr(ngayTaoHD, 'strftime') else str(ngayTaoHD)
+                ngay_tao_str = str(ngayTaoHD)
             
             # Định dạng tiền tệ
             tong_tien_str = f"{tongTien:,.0f}"

@@ -36,7 +36,7 @@ class DSHoaDon:
         try:
             cursor = self.conn.cursor()
             cursor.execute("INSERT INTO HOADON (maHD, maNV, maKH, tongTien) VALUES (?, ?, ?, ?)",
-                         (hd.maHD, hd.maNV, hd.maKH, hd.tongTien))
+                (hd.maHD, hd.maNV, hd.maKH, hd.tongTien))
             self.conn.commit()
             return True
         except Exception as e:
@@ -68,6 +68,10 @@ class DSHoaDon:
         query = f"UPDATE HOADON SET {set_clause} WHERE maHD = ?"
         self.cursor.execute(query, values)
         self.conn.commit()
+        if self.cursor.rowcount > 0:
+            return True
+        else:
+            return False
 
     def xuat(self):
         """Xuất danh sách hóa đơn"""
@@ -87,10 +91,10 @@ class DSHoaDon:
             cursor.execute("SELECT thanhTien FROM CHITIETHD WHERE maHD = ?", (maHD,))
             rows = cursor.fetchall()
             tongTien = sum(row[0] for row in rows) if rows else 0
-            
+
             cursor.execute("UPDATE HOADON SET tongTien = ? WHERE maHD = ?", (tongTien, maHD))
             self.conn.commit()
-            
+
             # Cập nhật tổng tiền trong danh sách
             self.cursor.execute("SELECT tongTien FROM HOADON WHERE maHD = ?", (maHD,))
             row = self.cursor.fetchone()

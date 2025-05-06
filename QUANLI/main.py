@@ -39,10 +39,10 @@ root.grid_columnconfigure(0, weight=1)
 options = {
     "Quản Lý Nhân viên": ["Thêm nhân viên", "Sửa thông tin nhân viên", "Tìm kiếm nhân viên", "Hiển thị danh sách"],
     "Quản Lý Hóa đơn": ["Tạo hóa đơn", "Sửa hóa đơn", "Tìm kiếm hóa đơn", "Hiển thị hóa đơn"],
-    "Quản Lý Khách hàng": ["Thêm khách hàng", "Sửa thông tin khách hàng", "Tìm kiếm khách hàng", "Xóa khách hàng", "Hiển thị danh sách"],
+    "Quản Lý Khách hàng": ["Thêm khách hàng", "Sửa thông tin khách hàng", "Tìm kiếm khách hàng", "Hiển thị danh sách"],
     "Quản Lý Sách": ["Thêm sản phẩm", "Sửa thông tin sản phẩm", "Tìm kiếm sản phẩm", "Danh sách sản phẩm"],
     "Thống Kê Doanh thu": [],
-    "Quản Lý Phiếu nhập": ["Tạo phiếu nhập", "Tìm kiếm phiếu nhập", "Sửa phiếu nhập", "Hiển thị danh sách"]
+    "Quản Lý Phiếu nhập": ["Tạo phiếu nhập", "Tìm kiếm phiếu nhập", "Sửa phiếu nhập", "Hiển thị phiếu nhập"]
 }
 
 nhan_vien_gui = NhanVienGUI(main_frame)

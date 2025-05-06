@@ -7,22 +7,25 @@ class ThongKeBUSS:
 
     def lay_du_lieu_tu_sql(self):
         self.dshoadon = self.dao.lay_du_lieu_tu_sql()
-        # Chuyển đổi ngày từ str → datetime nếu cần
+        dshd_moi = []
         for i in range(len(self.dshoadon)):
             maHD, ngayTaoHD, maNV, tongTien = self.dshoadon[i]
-
+            if ngayTaoHD is None:
+                continue
             if isinstance(ngayTaoHD, str):
                 try:
                     ngayTaoHD = datetime.strptime(ngayTaoHD, "%Y-%m-%d")
                 except ValueError:
                     try:
-                        ngayTaoHD = datetime.strptime(ngayTaoHD, "%Y-%m-%d %H:%M:%S")
-                    except ValueError:
-                        continue  # bỏ qua hóa đơn nếu lỗi định dạng
+                        ngayTaoHD = datetime.strptime(ngayTaoHD[:10], "%Y-%m-%d")
+                    except Exception:
+                        continue  # bỏ qua hóa đơn nếu vẫn lỗi
             elif isinstance(ngayTaoHD, date) and not isinstance(ngayTaoHD, datetime):
                 ngayTaoHD = datetime.combine(ngayTaoHD, time.min)
-
-            self.dshoadon[i] = (maHD, ngayTaoHD, maNV, tongTien)
+            elif not isinstance(ngayTaoHD, datetime):
+                continue
+            dshd_moi.append((maHD, ngayTaoHD, maNV, tongTien))
+        self.dshoadon = dshd_moi
 
     def ThongKeTuNgayDenNgay(self, ngayBD, ngayKT):
         ket_qua = []

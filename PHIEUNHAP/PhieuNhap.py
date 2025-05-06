@@ -1,25 +1,23 @@
 from datetime import datetime
 
 
-class HoaDon:
-    def __init__(self, maHD="", maNV="", maKH="", ngayTaoHD=None, tongTien=None):
-        self.maHD = maHD
+class PhieuNhap:
+    def __init__(self, maPN="", ngayTaoPN=None, maNV="", tongTien=None):
+        self.maPN = maPN
+        self.ngayTaoPN = ngayTaoPN if ngayTaoPN else datetime.now().strftime("%Y-%m-%d")
         self.maNV = maNV
-        self.maKH = maKH
-        self.ngayTaoHD = ngayTaoHD if ngayTaoHD else datetime.now().strftime("%Y-%m-%d")
         self.tongTien = tongTien
 
-    def thongTinHD(self, maHD, maNV, maKH, tongTien):
-        """Thiết lập thông tin hóa đơn"""
-        self.maHD = maHD
+    def thongTinPN(self, maPN, maNV, tongTien):
+        """Thiết lập thông tin phiếu nhập"""
+        self.maPN = maPN
         self.maNV = maNV
-        self.maKH = maKH
         self.tongTien = tongTien
 
     def tinhTongTien(self, cursor):
-        """Tính tổng tiền hóa đơn từ chi tiết"""
+        """Tính tổng tiền phiếu nhập từ chi tiết"""
         try:
-            cursor.execute("SELECT thanhTien FROM CHITIETHD WHERE maHD = ?", (self.maHD,))
+            cursor.execute("SELECT thanhTien FROM CHITIETPN WHERE maPN = ?", (self.maPN,))
             rows = cursor.fetchall()
             self.tongTien = sum(row[0] for row in rows) if rows else 0
             return self.tongTien
@@ -28,16 +26,15 @@ class HoaDon:
             return 0
 
     def xuat(self):
-        """Xuất thông tin hóa đơn"""
-        return f"""Mã hóa đơn: {self.maHD}
+        """Xuất thông tin phiếu nhập"""
+        return f"""Mã phiếu nhập: {self.maPN}
+Ngày tạo phiếu nhập: {self.ngayTaoPN}
 Mã nhân viên: {self.maNV}
-Mã khách hàng: {self.maKH}
-Ngày tạo hóa đơn: {self.ngayTaoHD}
 Tổng tiền: {self.tongTien} VND"""
 
     def __str__(self):
-        """Trả về chuỗi mô tả hóa đơn"""
-        return f"Hóa đơn {self.maHD} | NV: {self.maNV} | KH: {self.maKH} | Ngày: {self.ngayTaoHD} | Tổng tiền: {self.tongTien}"
+        """Trả về chuỗi mô tả phiếu nhập"""
+        return f"Phiếu nhập {self.maPN} | Ngày: {self.ngayTaoPN} | NV: {self.maNV} | Tổng tiền: {self.tongTien}"
 
     @staticmethod
     def soNguyen(value):

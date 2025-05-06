@@ -205,7 +205,7 @@ class SanPhamGUI(tk.Frame):
                 product["nhaXuatBan"]
             )
             # Debug: In ra giá trị của từng sản phẩm
-            print(f"Adding product to tree: {values}")
+
             self.tree_sua.insert("", "end", values=values)
 
     def on_select_product(self, event):
@@ -365,8 +365,12 @@ class SanPhamGUI(tk.Frame):
         self.tree_ds.configure(yscrollcommand=scrollbar.set)
         
         # Đặt vị trí các widget
-        self.tree_ds.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        self.tree_ds.pack(side="top", fill="both", expand=True, padx=10, pady=10)
         scrollbar.pack(side="right", fill="y")
+        
+        # Thêm nút Xuất Excel vào cuối danh sách
+        btn_xuat_excel = tk.Button(frame, text="Xuất Excel", command=self.xuatExcel, bg="#2196F3", fg="white")
+        btn_xuat_excel.pack(side="bottom", anchor="e", padx=10, pady=5)
         
         # Tải danh sách sản phẩm
         self.load_all_products()
@@ -553,6 +557,56 @@ class SanPhamGUI(tk.Frame):
         self.entry_update_price.delete(0, tk.END)
         self.entry_update_author.delete(0, tk.END)
         self.entry_update_publisher.delete(0, tk.END)
+
+    def xuatExcel(self):
+        """Xuất danh sách sản phẩm ra file Excel"""
+        try:
+            import openpyxl
+            from openpyxl.styles import Alignment, Font, PatternFill
+            from openpyxl.utils import get_column_letter
+
+            # Lấy danh sách sản phẩm
+            self.load_products_from_sql()
+            ds = self.products
+            if not ds:
+                messagebox.showwarning("Cảnh báo", "Không có dữ liệu sản phẩm để xuất!")
+                return
+
+            from tkinter import filedialog
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".xlsx",
+                filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
+                title="Lưu file Excel"
+            )
+            if not file_path:
+                return
+
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Danh sách sản phẩm"
+
+            headers = ["Mã SP", "Tên SP", "Số lượng tồn", "Đơn giá", "Tác giả", "Nhà xuất bản"]
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+                cell.alignment = Alignment(horizontal="center")
+
+            for row, sp in enumerate(ds, 2):
+                ws.cell(row=row, column=1, value=sp["maSP"])
+                ws.cell(row=row, column=2, value=sp["tenSP"])
+                ws.cell(row=row, column=3, value=sp["soLuongTon"])
+                ws.cell(row=row, column=4, value=sp["donGia"])
+                ws.cell(row=row, column=5, value=sp["tacGia"])
+                ws.cell(row=row, column=6, value=sp["nhaXuatBan"])
+
+            for col in range(1, len(headers) + 1):
+                ws.column_dimensions[get_column_letter(col)].width = 18
+
+            wb.save(file_path)
+            messagebox.showinfo("Thành công", f"Đã xuất danh sách sản phẩm thành công!\nFile được lưu tại: {file_path}")
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xuất file Excel:\n{str(e)}")
 
 
 if __name__ == "__main__":

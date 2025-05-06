@@ -1,6 +1,10 @@
 import re
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
+
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 
 from .DSNhanVien import DSNhanVien
 from .NhanVien import NhanVien
@@ -59,93 +63,6 @@ class NhanVienGUI:
             self.label_thong_bao.config(text=f"Lỗi khi hiển thị danh sách: {str(e)}", fg="red")
 
 
-    # def hienThi(self, action):
-    #     """Ẩn widget trong frame trước khi hiển thị"""
-    #     for widget in self.frame.winfo_children():
-    #         widget.grid_forget()
-    #
-    #     self.frame.grid(row=0, column=0, sticky="nsew")
-    #
-    #     self.btn_lam_moi.pack(side=tk.LEFT, padx=5)
-    #     self.btn_luu.pack(side=tk.LEFT, padx=5)
-    #     self.btn_luu.config(state="normal")
-    #
-    #     if action=="Hiển thị danh sách":
-    #         # Chỉ hiển thị danh sách, ẩn form nhập liệu và nút
-    #         self.frame_danh_sach.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
-    #         self.hienThiDS()  # Gọi lại để load dữ liệu
-    #
-    #     else:
-    #         # Hiển thị form nhập liệu và nút cho các chức năng khác
-    #         self.frame_nhap.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
-    #         self.frame_button.grid(row=1, column=0, pady=10, sticky="nsew")
-    #         self.btn_luu.config(state="normal")
-    #
-    #         if action=="Tìm kiếm nhân viên":
-    #             # Tạo giao diện tìm kiếm mới
-    #             self.taoGiaoDienTimKiem()
-    #
-    #             # Ẩn các nút không cần thiết
-    #             self.btn_luu.pack_forget()
-    #             self.btn_lam_moi.pack_forget()
-    #         else:
-    #             # Reset form chỉ khi không phải là tìm kiếm
-    #             self.lamMoiForm()  # Reset form khi chuyển giữa các chế độ
-    #
-    #             if action=="Thêm nhân viên":
-    #                 self.label_thong_bao.config(text="Nhập thông tin nhân viên mới", fg="blue")
-    #                 self.entry_maNV.config(state="normal")
-    #                 self.btn_luu.config(state="normal")
-    #
-    #             elif action=="Sửa thông tin nhân viên":
-    #                 self.label_thong_bao.config(text="Chọn nhân viên từ danh sách để sửa", fg="blue")
-    #                 self.entry_maNV.config(state="readonly")
-    #
-    #                 if hasattr(self, "frame_form"):
-    #                     self.frame_form.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
-    #                     for widget in self.frame_form.winfo_children():
-    #                         if isinstance(widget, tk.Label) or isinstance(widget, tk.Entry):
-    #                             widget.grid_configure(sticky="ew")
-    #
-    #                 for widget in self.frame.winfo_children():
-    #                     grid_info = widget.grid_info()
-    #                     if int(grid_info.get('row', -1)) > 1:
-    #                         widget.grid_forget()
-    #
-    #                 if hasattr(self, "btn_lam_moi") and self.btn_lam_moi.winfo_exists():
-    #                     self.btn_lam_moi.pack_forget()
-    #
-    #                 if hasattr(self, "btn_luu") and self.btn_luu.winfo_exists():
-    #                     self.btn_luu.pack_forget()
-    #
-    #                 self.frame_suaNV = tk.Frame(self.frame)
-    #
-    #                 self.btn_huy_sua = tk.Button(self.frame_suaNV, text="Hủy",
-    #                     command=self.lamMoiForm, bg="red", fg="white",
-    #                     font=("Arial", 10, "bold"))
-    #                 self.btn_huy_sua.pack(side=tk.LEFT, padx=5, pady=5)
-    #
-    #                 self.btn_xac_nhan = tk.Button(self.frame_suaNV, text="Xác nhận sửa",
-    #                     command=self.suaNhanVien, bg="green", fg="white",
-    #                     font=("Arial", 10, "bold"))
-    #                 self.btn_xac_nhan.pack(side=tk.LEFT, padx=5, pady=5)
-    #
-    #                 # Đặt frame_suaNV vào một cột riêng biệt
-    #                 self.frame_suaNV.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky="w")  # thêm columnspan
-    #
-    #                 self.separator = tk.Frame(self.frame, height=2, bg="gray")
-    #                 self.separator.grid(row=3, column=0, columnspan=2, sticky="ew", padx=10, pady=5)  # thêm columnspan
-    #
-    #                 self.frame_danh_sach.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")  # thêm columnspan
-    #                 self.frame.grid_rowconfigure(0, weight=0)
-    #                 self.frame.grid_rowconfigure(2, weight=0)
-    #                 self.frame.grid_rowconfigure(3, weight=0)
-    #                 self.frame.grid_rowconfigure(4, weight=1)
-    #                 self.frame.grid_columnconfigure(0, weight=1)
-    #                 self.btn_luu.config(state="disabled")
-    #
-    #             else:
-    #                 self.label_thong_bao.config(text="", fg="black")
     def hienThi(self, action):
         """Ẩn tất cả widgets, sau đó hiển thị giao diện theo hành động."""
 
@@ -164,6 +81,10 @@ class NhanVienGUI:
             # Hiện danh sách nhân viên
             self.frame_danh_sach.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
             self.hienThiDS()
+
+            btn_xuat_excel = tk.Button(self.frame_danh_sach, text="Xuất Excel", command=self.xuatExcel,
+                bg="#2196F3", fg="white")
+            btn_xuat_excel.pack(pady=5)
 
         elif action=="Tìm kiếm nhân viên":
             # Ẩn form nhập nếu có
@@ -287,7 +208,6 @@ class NhanVienGUI:
         title_label.grid(row=0, column=0, pady=(20, 15), sticky="ew")
         self.search_frame.columnconfigure(0, weight=1)
 
-        # Frame chứa radio buttons
         # Frame chứa radio buttons
         radio_frame = tk.Frame(self.search_frame, bg="white")
         radio_frame.grid(row=1, column=0, pady=10, sticky="ew")
@@ -434,40 +354,6 @@ class NhanVienGUI:
         if hasattr(self, "result_label") and self.result_label.winfo_exists():
             self.result_label.config(text="")
 
-    # def thucHienTimKiem(self):
-    #     """Thực hiện tìm kiếm theo loại đã chọn"""
-    #     search_text = self.search_entry.get()
-    #
-    #     # Kiểm tra nếu ô nhập liệu trống
-    #     if not search_text.strip():
-    #         self.result_label.config(text="Vui lòng nhập thông tin tìm kiếm!", fg="red")
-    #         return
-    #
-    #     # Xóa kết quả tìm kiếm cũ
-    #     if hasattr(self, "result_frame") and self.result_frame.winfo_exists():
-    #         self.result_frame.grid_forget()
-    #
-    #     # Thực hiện tìm kiếm
-    #     try:
-    #         if self.search_type.get()=="id":
-    #             # Tìm kiếm chính xác theo mã
-    #             dsNhanVien = self.dsNhanVien.timKiemNV(maNV=search_text)
-    #         else:
-    #             # Tìm kiếm gần đúng theo tên
-    #             dsNhanVien = self.timKiemGanDungTheoTen(search_text)
-    #
-    #         # Kiểm tra kết quả
-    #         if not dsNhanVien:
-    #             self.result_label.config(text="Không tìm thấy nhân viên", fg="red")
-    #             return
-    #
-    #         # Hiển thị thông tin nhân viên đầu tiên
-    #         nv = dsNhanVien[0]
-    #         self.hienThiThongTinNhanVien(nv)
-    #         self.result_label.config(text=f"Đã tìm thấy {len(dsNhanVien)} nhân viên", fg="green")
-    #
-    #     except Exception as e:
-    #         self.result_label.config(text="Không tìm thấy nhân viên", fg="red")
     def thucHienTimKiem(self):
         """Thực hiện tìm kiếm theo loại đã chọn"""
         search_text = self.search_entry.get()
@@ -804,9 +690,23 @@ class NhanVienGUI:
             nvien = NhanVien(maNV, tenNV, diaChi, SĐT, luong, chucVu, trangThai)
 
             if self.dsNhanVien.themNV(nvien):
+                # Cập nhật danh sách
                 self.hienThiDS()
+                # Làm mới form
                 self.lamMoiForm()
+                # Hiển thị thông báo thành công
                 self.label_thong_bao.config(text="Thêm nhân viên thành công!", fg="green")
+                
+                # Đảm bảo form nhập liệu luôn hiển thị trên cùng
+                self.frame_nhap.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+                self.frame_button.grid(row=1, column=0, pady=10, sticky="nsew")
+                self.frame_danh_sach.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
+                
+                # Cấu hình lại layout
+                self.frame.grid_rowconfigure(0, weight=0)
+                self.frame.grid_rowconfigure(1, weight=0)
+                self.frame.grid_rowconfigure(2, weight=1)
+                self.frame.grid_columnconfigure(0, weight=1)
             else:
                 self.label_thong_bao.config(text='Lỗi! Không thể thêm nhân viên.', fg="red")
         except Exception as e:
@@ -866,6 +766,7 @@ class NhanVienGUI:
         """Làm mới form nhập liệu"""
         # Check if the widgets exist before trying to clear them
         if hasattr(self, "entry_maNV") and self.entry_maNV.winfo_exists():
+            self.entry_maNV.config(state="normal")  # Mở khóa trường mã nhân viên
             self.entry_maNV.delete(0, tk.END)
         if hasattr(self, "entry_tenNV") and self.entry_tenNV.winfo_exists():
             self.entry_tenNV.delete(0, tk.END)
@@ -880,7 +781,65 @@ class NhanVienGUI:
         if hasattr(self, "entry_trangThai") and self.entry_trangThai.winfo_exists():
             self.entry_trangThai.delete(0, tk.END)
         if hasattr(self, "label_thong_bao") and self.label_thong_bao.winfo_exists():
-            self.label_thong_bao.grid()
+            self.label_thong_bao.config(text="")  # Xóa thông báo
+            
+        # Xóa selection trong treeview nếu có
+        if hasattr(self, "tree") and self.tree.winfo_exists():
+            self.tree.selection_remove(self.tree.selection())
+
+    def xuatExcel(self):
+        """Xuất danh sách nhân viên ra file Excel"""
+        try:
+            # Lấy danh sách nhân viên
+            dsNhanVien = self.dsNhanVien.danhSachNV()
+            
+            if not dsNhanVien:
+                messagebox.showwarning("Cảnh báo", "Không có dữ liệu nhân viên để xuất!")
+                return
+                
+            # Mở hộp thoại chọn nơi lưu file
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".xlsx",
+                filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
+                title="Lưu file Excel"
+            )
+            
+            if not file_path:  # Người dùng hủy việc lưu file
+                return
+                
+            # Tạo workbook mới
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Danh sách nhân viên"
+            
+            # Đặt tiêu đề cho các cột
+            headers = ["Mã NV", "Họ tên", "Địa chỉ", "SĐT", "Lương", "Chức vụ", "Trạng thái"]
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+                cell.alignment = Alignment(horizontal="center")
+            
+            # Thêm dữ liệu
+            for row, nv in enumerate(dsNhanVien, 2):
+                ws.cell(row=row, column=1, value=nv.maNV)
+                ws.cell(row=row, column=2, value=nv.tenNV)
+                ws.cell(row=row, column=3, value=nv.diaChi)
+                ws.cell(row=row, column=4, value=nv.SĐT)
+                ws.cell(row=row, column=5, value=nv.luong)
+                ws.cell(row=row, column=6, value=nv.chucVu)
+                ws.cell(row=row, column=7, value="Còn làm" if nv.trangThai==1 else "Nghỉ làm")
+            
+            # Điều chỉnh độ rộng cột
+            for col in range(1, len(headers) + 1):
+                ws.column_dimensions[get_column_letter(col)].width = 15
+            
+            # Lưu file
+            wb.save(file_path)
+            messagebox.showinfo("Thành công", f"Đã xuất danh sách nhân viên thành công!\nFile được lưu tại: {file_path}")
+            
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xuất file Excel:\n{str(e)}")
 
 
 if __name__=="__main__":

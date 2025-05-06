@@ -23,7 +23,7 @@ class KhachHangGUI(tk.Frame):
                 "DATABASE=DOANPYTHON;"
                 "Trusted_Connection=yes;"
             )
-            print("✅ Kết nối SQL thành công!")
+
             return conn
         except Exception as e:
             messagebox.showerror("Lỗi kết nối SQL", str(e))
@@ -48,7 +48,6 @@ class KhachHangGUI(tk.Frame):
                     "dienThoai": row[3]
                 }
                 self.customers.append(customer)
-            print(f"✅ Đã tải {len(self.customers)} khách hàng từ SQL!")
         except Exception as e:
             messagebox.showerror("Lỗi SQL", str(e))
 
@@ -62,19 +61,17 @@ class KhachHangGUI(tk.Frame):
         label_title.grid(row=0, column=0, padx=10, sticky="w")
         top_bar.grid_columnconfigure(0, weight=1)
 
-        # Tạo các frame cho từng chức năng
+        # Tạo các frame cho từng chức năng (bỏ frame_xoa)
         self.frame_them = tk.Frame(self)
         self.frame_sua = tk.Frame(self)
         self.frame_tim = tk.Frame(self)
         self.frame_danhsach = tk.Frame(self)
-        self.frame_xoa = tk.Frame(self)
 
         # Xây dựng giao diện cho từng chức năng
         self.create_frame_them()
         self.create_frame_sua()
         self.create_frame_tim()
         self.create_frame_danhsach()
-        self.create_frame_xoa()
 
     def close_frame(self):
         """Đóng khung Quản Lý Khách Hàng."""
@@ -106,6 +103,7 @@ class KhachHangGUI(tk.Frame):
         tk.Label(frame, text="Mã khách hàng cần sửa:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
         self.entry_update_id = tk.Entry(frame)
         self.entry_update_id.grid(row=0, column=1, padx=10, pady=10)
+        self.entry_update_id.config(state="readonly")
         self.entry_update_id.bind("<FocusOut>", self.prefill_customer_info)
 
         tk.Label(frame, text="Tên mới:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
@@ -125,7 +123,7 @@ class KhachHangGUI(tk.Frame):
 
     def create_frame_tim(self):
         frame = self.frame_tim
-        tk.Label(frame, text="Nhập từ khóa tìm kiếm:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        tk.Label(frame, text="Nhập mã khách hàng cần tìm kiếm:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
         self.entry_search = tk.Entry(frame)
         self.entry_search.grid(row=0, column=1, padx=10, pady=10)
 
@@ -151,16 +149,13 @@ class KhachHangGUI(tk.Frame):
         frame.grid_columnconfigure(0, weight=1)
         frame.grid_rowconfigure(0, weight=1)
 
+        self.tree_ds.bind("<<TreeviewSelect>>", self.prefill_customer_info_from_list)
+
+        # Thêm nút Xuất Excel vào cuối danh sách
+        btn_xuat_excel = tk.Button(frame, text="Xuất Excel", command=self.xuatExcel, bg="#2196F3", fg="white")
+        btn_xuat_excel.grid(row=1, column=0, sticky="e", padx=10, pady=5)
+
         self.load_all_customers()
-
-    def create_frame_xoa(self):
-        frame = self.frame_xoa
-        tk.Label(frame, text="Mã khách hàng cần xóa:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
-        self.entry_delete_id = tk.Entry(frame)
-        self.entry_delete_id.grid(row=0, column=1, padx=10, pady=10)
-
-        btn_delete = tk.Button(frame, text="Xóa", command=self.delete_customer)
-        btn_delete.grid(row=1, column=0, columnspan=2, padx=10, pady=20)
 
     def load_all_customers(self):
         # Cập nhật dữ liệu từ SQL trước
@@ -230,18 +225,13 @@ class KhachHangGUI(tk.Frame):
             messagebox.showerror("Lỗi", "Vui lòng nhập mã khách hàng!")
             return
 
-        try:
-            # Chuyển đổi mã khách hàng sang kiểu số nguyên nếu có thể
-            maKH = int(maKH_str)
-        except ValueError:
-            # Nếu không thể chuyển sang số nguyên, giữ nguyên dạng chuỗi
-            maKH = maKH_str
+        maKH = maKH_str  # Không cho phép sửa mã khách hàng, lấy đúng mã đang readonly
 
         # Tải lại danh sách trước khi tìm
         self.load_customers_from_sql()
 
-        # Tìm khách hàng trong self.customers
-        customer = next((c for c in self.customers if c["maKH"]==maKH), None)
+        # Tìm khách hàng trong self.customers (so sánh dưới dạng chuỗi)
+        customer = next((c for c in self.customers if str(c["maKH"]) == str(maKH)), None)
         if not customer:
             messagebox.showerror("Lỗi", f"Không tìm thấy khách hàng với mã {maKH_str}")
             return
@@ -278,12 +268,20 @@ class KhachHangGUI(tk.Frame):
         messagebox.showinfo("Thành công", f"Đã cập nhật khách hàng {maKH_str}")
         self.load_all_customers()
 
+        # Chọn lại dòng vừa sửa nếu còn tồn tại (so sánh dưới dạng chuỗi)
+        for item in self.tree_ds.get_children():
+            if str(self.tree_ds.item(item, "values")[0]) == str(maKH_str):
+                self.tree_ds.selection_set(item)
+                self.tree_ds.see(item)
+                break
+
         # Xóa nội dung các ô nhập sau khi cập nhật thành công
+        self.entry_update_id.config(state="normal")
         self.entry_update_id.delete(0, tk.END)
+        self.entry_update_id.config(state="readonly")
         self.entry_update_name.delete(0, tk.END)
         self.entry_update_address.delete(0, tk.END)
         self.entry_update_phone.delete(0, tk.END)
-
 
     def search_customer(self):
         # Tải lại danh sách trước khi tìm
@@ -321,55 +319,6 @@ class KhachHangGUI(tk.Frame):
         if not results:
             messagebox.showinfo("Thông báo", "Không tìm thấy khách hàng với mã này.")
 
-    def delete_customer(self):
-        maKH_str = self.entry_delete_id.get().strip()
-
-        if not maKH_str:
-            messagebox.showerror("Lỗi", "Vui lòng nhập mã khách hàng cần xóa!")
-            return
-
-        try:
-            # Chuyển đổi mã khách hàng sang kiểu số nguyên nếu có thể
-            maKH = int(maKH_str)
-        except ValueError:
-            # Nếu không thể chuyển sang số nguyên, giữ nguyên dạng chuỗi
-            maKH = maKH_str
-
-        # Tải lại danh sách để đảm bảo dữ liệu mới nhất
-        self.load_customers_from_sql()
-
-        # Kiểm tra khách hàng có tồn tại không
-        customer_exists = False
-        for customer in self.customers:
-            if customer["maKH"]==maKH:
-                customer_exists = True
-                break
-
-        if not customer_exists:
-            messagebox.showerror("Lỗi", f"Không tìm thấy khách hàng có mã '{maKH_str}'!")
-            return
-
-        # Xác nhận trước khi xóa
-        if not messagebox.askyesno("Xác nhận", f"Bạn có chắc muốn xóa khách hàng {maKH_str}?"):
-            return
-
-        # Xóa trên SQL
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute("DELETE FROM KhachHang WHERE maKH = ?", (maKH,))
-            row_count = cursor.rowcount
-            self.conn.commit()
-
-            if row_count > 0:
-                messagebox.showinfo("Thành công", f"Đã xóa khách hàng {maKH_str}")
-                # Tải lại danh sách và xóa nội dung ô nhập
-                self.load_all_customers()
-                self.entry_delete_id.delete(0, tk.END)
-            else:
-                messagebox.showwarning("Cảnh báo", f"Không có khách hàng nào bị xóa với mã {maKH_str}")
-        except Exception as e:
-            messagebox.showerror("Lỗi SQL", str(e))
-
     def prefill_customer_info(self, event=None):
         maKH = self.entry_update_id.get().strip()
         if not maKH:
@@ -391,6 +340,23 @@ class KhachHangGUI(tk.Frame):
             self.entry_update_address.delete(0, tk.END)
             self.entry_update_phone.delete(0, tk.END)
 
+    def prefill_customer_info_from_list(self, event=None):
+        selected = self.tree_ds.selection()
+        if not selected:
+            return
+        values = self.tree_ds.item(selected[0], "values")
+        if values:
+            self.entry_update_id.config(state="normal")
+            self.entry_update_id.delete(0, tk.END)
+            self.entry_update_id.insert(0, values[0])
+            self.entry_update_id.config(state="readonly")
+            self.entry_update_name.delete(0, tk.END)
+            self.entry_update_name.insert(0, values[1])
+            self.entry_update_address.delete(0, tk.END)
+            self.entry_update_address.insert(0, values[2])
+            self.entry_update_phone.delete(0, tk.END)
+            self.entry_update_phone.insert(0, values[3])
+
     def anGiaoDien(self):
         """Ẩn giao diện khách hàng"""
         self.grid_forget()
@@ -404,23 +370,72 @@ class KhachHangGUI(tk.Frame):
         self.frame_sua.grid_forget()
         self.frame_tim.grid_forget()
         self.frame_danhsach.grid_forget()
-        self.frame_xoa.grid_forget()
         
         # Hiển thị frame tương ứng với action
-        if action == "Thêm khách hàng":
+        if action=="Thêm khách hàng":
             self.frame_them.grid(row=1, column=0, sticky="nsew")
-        elif action == "Sửa thông tin khách hàng":
-            self.frame_sua.grid(row=1, column=0, sticky="nsew")
-        elif action == "Tìm kiếm khách hàng":
+        elif action=="Sửa thông tin khách hàng":
+            self.frame_sua.grid(row=1, column=0, sticky="ew", padx=10, pady=10)
+            self.frame_danhsach.grid(row=2, column=0, sticky="nsew", padx=10, pady=10)
+            self.grid_rowconfigure(2, weight=1)
+            self.grid_columnconfigure(0, weight=1)
+            self.load_all_customers()
+        elif action=="Tìm kiếm khách hàng":
             self.frame_tim.grid(row=1, column=0, sticky="nsew")
-        elif action == "Hiển thị danh sách":
+        elif action=="Hiển thị danh sách":
             self.frame_danhsach.grid(row=1, column=0, sticky="nsew")
             self.load_all_customers()
-        elif action == "Xóa khách hàng":
-            self.frame_xoa.grid(row=1, column=0, sticky="nsew")
+
+    def xuatExcel(self):
+        """Xuất danh sách khách hàng ra file Excel"""
+        try:
+            import openpyxl
+            from openpyxl.styles import Alignment, Font, PatternFill
+            from openpyxl.utils import get_column_letter
+
+            # Lấy danh sách khách hàng
+            self.load_customers_from_sql()
+            ds = self.customers
+            if not ds:
+                messagebox.showwarning("Cảnh báo", "Không có dữ liệu khách hàng để xuất!")
+                return
+
+            from tkinter import filedialog
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".xlsx",
+                filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
+                title="Lưu file Excel"
+            )
+            if not file_path:
+                return
+
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Danh sách khách hàng"
+
+            headers = ["Mã KH", "Tên KH", "Địa chỉ", "Điện thoại"]
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+                cell.alignment = Alignment(horizontal="center")
+
+            for row, kh in enumerate(ds, 2):
+                ws.cell(row=row, column=1, value=kh["maKH"])
+                ws.cell(row=row, column=2, value=kh["tenKH"])
+                ws.cell(row=row, column=3, value=kh["diaChi"])
+                ws.cell(row=row, column=4, value=kh["dienThoai"])
+
+            for col in range(1, len(headers) + 1):
+                ws.column_dimensions[get_column_letter(col)].width = 18
+
+            wb.save(file_path)
+            messagebox.showinfo("Thành công", f"Đã xuất danh sách khách hàng thành công!\nFile được lưu tại: {file_path}")
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi xuất file Excel:\n{str(e)}")
 
 
-if __name__ == "__main__":
+if __name__=="__main__":
     root = tk.Tk()
     root.title("Quản lý khách hàng")
     root.geometry("800x600")
